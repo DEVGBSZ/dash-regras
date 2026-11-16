@@ -1,6 +1,7 @@
 dash
 dash-bootstrap-components
 plotly
+pandas
 duckdb
 requests
 urllib3
