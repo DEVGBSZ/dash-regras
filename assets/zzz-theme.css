@@ -1,0 +1,104 @@
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 16px;
+  color: var(--navy);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  font-weight: 700;
+}
+.theme-toggle:hover { background: var(--canvas); border-color: var(--muted); }
+.theme-toggle i { font-size: 16px; }
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #000;
+  --surface: #101010;
+  --ink: #e6e6e6;
+  --navy: #f2f2f2;
+  --muted: #aaa;
+  --line: #303030;
+  --shadow: none;
+  --blue-pale: #172238;
+  --purple-pale: #272035;
+  --green-pale: #132a21;
+  --orange-pale: #302217;
+  --pink-pale: #311e28;
+  --bs-body-bg: #101010;
+  --bs-body-color: #e6e6e6;
+  --bs-border-color: #303030;
+  --tabs-background: #101010;
+  --tabs-border: #303030;
+  --tabs-primary: #8eb5ff;
+}
+[data-theme="dark"] body { background: #000; color: var(--ink); }
+[data-theme="dark"] .metric,
+[data-theme="dark"] .compact-item,
+[data-theme="dark"] .technical-strip { background: #181818; }
+[data-theme="dark"] .more-items summary,
+[data-theme="dark"] .wide-button { background: #202020; color: #a8c6ff; }
+[data-theme="dark"] .more-items summary:hover,
+[data-theme="dark"] .wide-button:hover { background: #2b2b2b; }
+[data-theme="dark"] .manager-tabs .manager-tab { background: #101010; color: #aaa; border-color: #303030; }
+[data-theme="dark"] .manager-tabs .manager-tab--selected { background: #202020; color: #a8c6ff; border-bottom-color: #8eb5ff; }
+[data-theme="dark"] .compact-progress { background: #333; }
+[data-theme="dark"] .compact-progress-label { color: #82d4ac; }
+[data-theme="dark"] .late-status { color: #ffc085; }
+[data-theme="dark"] .compact-comment strong,
+[data-theme="dark"] .pending-summary strong,
+[data-theme="dark"] .pending-item strong,
+[data-theme="dark"] .action-card h3 { color: #ddd; }
+[data-theme="dark"] .muted,
+[data-theme="dark"] .pending-item span:not(.status-dot) { color: #aaa; }
+[data-theme="dark"] .pending-item { border-bottom-color: var(--line); }
+[data-theme="dark"] .pending-count { color: #8edbb5; border-color: #28533d; }
+[data-theme="dark"] .mini-badge { color: #ccc; background: #292929; }
+[data-theme="dark"] .mini-badge--blue,
+[data-theme="dark"] .mini-badge--M,
+[data-theme="dark"] .tag--blue,
+[data-theme="dark"] .technical-chip--blue { color: #a8c6ff; background: var(--blue-pale); }
+[data-theme="dark"] .mini-badge--purple,
+[data-theme="dark"] .mini-badge--G { color: #c9b4ff; background: var(--purple-pale); }
+[data-theme="dark"] .mini-badge--P,
+[data-theme="dark"] .technical-chip--green { color: #8edbb5; background: var(--green-pale); }
+[data-theme="dark"] .mini-badge--orange,
+[data-theme="dark"] .technical-chip--orange { color: #ffc085; background: var(--orange-pale); }
+[data-theme="dark"] .tag--pink,
+[data-theme="dark"] .action-icon--pink { color: #f3a8c9; background: var(--pink-pale); }
+[data-theme="dark"] .person-buttons button,
+[data-theme="dark"] .compact-comment i,
+[data-theme="dark"] .action-icon--blue,
+[data-theme="dark"] .technical-strip > strong i { color: #a8c6ff; }
+[data-theme="dark"] .icon-button,
+[data-theme="dark"] .card-arrow { color: #aaa; }
+[data-theme="dark"] .icon-button:hover,
+[data-theme="dark"] .card-arrow:hover { color: #fff; background: #292929; }
+[data-theme="dark"] .modal-content { background: #101010; color: #e6e6e6; border-color: #303030; }
+
+/* Cores dos filtros na versão instalada do Dash. */
+:root[data-theme="dark"],
+[data-theme="dark"] .dash-dropdown {
+  --Dash-Fill-Interactive-Strong: #a8c6ff;
+  --Dash-Fill-Interactive-Weak: #222;
+  --Dash-Fill-Inverse-Strong: #191919;
+  --Dash-Fill-Primary-Active: #333;
+  --Dash-Fill-Primary-Hover: #292929;
+  --Dash-Fill-Disabled: #222;
+  --Dash-Stroke-Strong: #777;
+  --Dash-Stroke-Weak: #3a3a3a;
+  --Dash-Text-Primary: #a8c6ff;
+  --Dash-Text-Strong: #eee;
+  --Dash-Text-Weak: #bbb;
+  --Dash-Text-Disabled: #888;
+  --Dash-Shading-Strong: #000;
+  --Dash-Shading-Weak: #111;
+}
+@media (min-width: 761px) and (max-width: 1000px) {
+  .theme-toggle { grid-column: 2; }
+}

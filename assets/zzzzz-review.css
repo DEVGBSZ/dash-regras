@@ -1,0 +1,22 @@
+.kanban-cards { display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 8px; height: 100%; }
+.kanban-ticket { display: flex; flex-direction: column; gap: 6px; min-height: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+.kanban-ticket-meta, .kanban-ticket-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.kanban-ticket-key { color: var(--muted); font-size: 10px; font-weight: 700; }
+.kanban-ticket-title { padding: 0; border: 0; background: transparent; color: var(--navy); font: 700 12px/1.4 Manrope, sans-serif; text-align: left; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.kanban-ticket-title:hover { color: var(--blue); text-decoration: underline; }
+.kanban-ticket-owner { display: flex; align-items: center; gap: 6px; margin-top: auto; color: var(--muted); font-size: 10px; }
+.kanban-ticket-owner span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kanban-ticket-footer { color: var(--muted); font-size: 10px; }
+.kanban-ticket-footer span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kanban-ticket-footer span:last-child { flex-shrink: 0; }
+.sidebar-open-button { width: 100%; padding: 10px; margin-top: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--blue-pale); color: #315dbf; font-size: 12px; font-weight: 700; }
+.sidebar-window-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.sidebar-window-grid .kanban-ticket { min-height: 150px; }
+.letter-window-card { padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.letter-window-card h3 { margin: 10px 0; font-size: 17px; color: var(--navy); }
+.letter-window-card p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.issue-jira-link { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 6px; color: #2454be; background: var(--surface); font-size: 12px; font-weight: 700; text-decoration: none; border: 1px solid var(--line); }
+.issue-jira-link:hover { text-decoration: underline; border-color: var(--blue); }
+[data-theme="dark"] .kanban-ticket { background: #202020; }
+[data-theme="dark"] .issue-jira-link, [data-theme="dark"] .sidebar-open-button { color: #a8c6ff; }
+@media (max-width: 760px) { .sidebar-window-grid { grid-template-columns: 1fr; } }

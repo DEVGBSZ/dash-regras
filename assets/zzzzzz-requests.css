@@ -1,0 +1,179 @@
+.navigation-controls { gap: 10px 14px; }
+.allocation-controls { flex-wrap: wrap; }
+#allocation-period-control { width: 250px; }
+.extra-filter { width: 190px; font-size: 12px; }
+.navigation-controls .kanban-search-wrap { margin: 0; align-self: end; flex: 1 1 240px; position: static; }
+.upcoming-view #upcoming-panel .panel-heading { margin-bottom: 12px; }
+.kanban-ticket { width: 100%; text-align: left; color: var(--ink); cursor: pointer; }
+.kanban-ticket:hover { border-color: var(--blue); }
+.kanban-ticket-meta { font-size: 10px; }
+.kanban-ticket-title { flex-shrink: 0; }
+.lane-open { padding: 0; color: var(--navy); background: transparent; border: 0; font: 700 13px Manrope,sans-serif; text-align: left; }
+.lane-open:hover { text-decoration: underline; }
+.allocation-item-link { border: 0; background: transparent; color: var(--navy); padding: 0; text-align: left; font-weight: 700; }
+.allocation-item-link:hover { color: var(--blue); text-decoration: underline; }
+#timeline-panel { min-height: 0; overflow: auto; }
+.timeline-row { display: grid; grid-template-columns: 35% 65%; width: 100%; padding: 8px; border: 0; border-bottom: 1px solid var(--line); background: var(--surface); color: var(--ink); text-align: left; }
+.timeline-row:hover { background: var(--blue-pale); }
+.timeline-label { min-width: 0; padding-right: 12px; }
+.timeline-label strong, .timeline-label small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.timeline-label small { color: var(--muted); font-size: 11px; }
+.timeline-track { position: relative; min-height: 35px; background: repeating-linear-gradient(to right, transparent 0,transparent calc(25% - 1px),var(--line) 25%); }
+.timeline-bar { position: absolute; top: 10px; height: 14px; border-radius: 4px; background: var(--blue); }
+.timeline-axis { position: relative; height: 24px; margin-left: 35%; font-size: 11px; color: var(--muted); }
+.sidebar-window-grid .kanban-ticket { min-height: 170px; }
+.side-card > .kanban-ticket { margin-top: 10px; }
+.timeline-month-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 10px 0; }
+.timeline-month-controls button { background: var(--surface); color: var(--navy); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; }
+.timeline-month-controls button:hover { border-color: var(--blue); }
+.timeline-year-control { display: flex; align-items: center; gap: 8px; min-width: 132px; }
+.timeline-year-control label { color: var(--muted); font-size: 12px; font-weight: 700; margin: 0; }
+.timeline-year-control #timeline-year { flex: 1; min-width: 84px; }
+.timeline-view-actions { display: flex; gap: 8px; margin-left: auto; }
+.timeline-view-actions button { font-weight: 700; }
+.timeline-view-actions button[aria-pressed="true"] { color: var(--blue); border-color: var(--blue); background: var(--blue-pale); }
+.kanban-controls { gap: 5px; }
+.kanban-controls button { padding: 5px 9px; }
+.kanban-page-select { width: 62px; font-size: 12px; flex-shrink: 0; }
+.kanban-page-select .dash-dropdown-trigger { padding: 5px 7px; }
+.kanban-page-select .dash-dropdown-value { min-width: 20px; }
+.gantt-table { --gantt-width: 3400px; border: 1px solid var(--line); overflow: auto; max-height: 56vh; background: var(--surface); position: relative; isolation: isolate; }
+.gantt-grid { display: grid; grid-template-columns: 280px 90px 90px 110px 100px 130px 130px 2470px; width: var(--gantt-width); min-width: var(--gantt-width); }
+.gantt-grid > * { border-right: 1px solid var(--line); padding: 10px 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.gantt-grid > :nth-child(-n+7) { position: sticky; z-index: 15; background: var(--surface); }
+.gantt-grid > :nth-child(1) { left: 0; }
+.gantt-grid > :nth-child(2) { left: 280px; }
+.gantt-grid > :nth-child(3) { left: 370px; }
+.gantt-grid > :nth-child(4) { left: 460px; }
+.gantt-grid > :nth-child(5) { left: 570px; }
+.gantt-grid > :nth-child(6) { left: 670px; }
+.gantt-grid > :nth-child(7) { left: 800px; box-shadow: 8px 0 10px -10px rgba(8,32,73,.55); }
+.gantt-header { position: sticky; top: 0; z-index: 30; background: var(--canvas); font-size: 11px; height: 56px; border-bottom: 1px solid var(--line); }
+.gantt-header > :nth-child(-n+7) { z-index: 31; background: var(--canvas); }
+.gantt-item { min-height: 50px; border-bottom: 1px solid var(--line); font-size: 11px; align-items: stretch; }
+.gantt-ticket { background: transparent; border: 0; text-align: left; color: var(--ink); white-space: nowrap; }
+.gantt-ticket:hover { background: var(--blue-pale); }
+.gantt-ticket small { margin-right: 10px; color: var(--muted); }
+.gantt-key { color: #2581ed; text-decoration: underline; }
+.gantt-group { display: block; width: var(--gantt-width); min-width: var(--gantt-width); content-visibility: visible; contain: none; }
+.gantt-group-head { display: grid; grid-template-columns: 800px 130px 2470px; width: var(--gantt-width); min-width: var(--gantt-width); min-height: 52px; align-items: center; border-bottom: 1px solid var(--line); cursor: pointer; list-style: none; }
+.gantt-group-head::-webkit-details-marker { display: none; }
+.gantt-person { padding: 12px; font-size: 16px; color: var(--navy); }
+.gantt-group-head .gantt-person { position: sticky; left: 0; z-index: 20; background: var(--surface); }
+.gantt-chevron { display: inline-block; margin-right: 12px; transition: transform .15s; }
+.gantt-group[open] .gantt-chevron { transform: rotate(90deg); }
+.gantt-total { color: var(--muted); font-size: 11px; }
+.gantt-group-head .gantt-total { position: sticky; left: 800px; z-index: 20; align-self: stretch; display: flex; align-items: center; background: var(--surface); border-right: 1px solid var(--line); box-shadow: 8px 0 10px -10px rgba(8,32,73,.55); }
+.gantt-track { position: relative; z-index: 0; min-height: 50px; background-image: linear-gradient(to right, var(--line) 1px, transparent 1px); overflow: hidden; padding: 0; }
+.gantt-track small { font-size: 10px; padding-left: 6px; }
+.gantt-bar { position: absolute; top: 11px; height: 28px; border-radius: 4px; color: white; }
+.gantt-today { position: absolute; width: 1px; background: #367dff; top: 0; bottom: 0; z-index: 2; }
+.gantt-axis { position: relative; }
+.gantt-axis span { position: absolute; top: 30px; font-size: 11px; }
+.gantt-axis strong { position: absolute; top: 4px; font-size: 12px; color: var(--muted); }
+.gantt-focus-marker { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--blue); z-index: 4; pointer-events: none; }
+.gantt-avatar { display: inline-flex; width: 25px; height: 25px; align-items: center; justify-content: center; border-radius: 50%; background: #5d45b6; color: white; font-size: 9px; }
+.gantt-owner { color: #8465d9; font-weight: 700; }
+.gantt-status { color: var(--navy); background: var(--blue-pale); }
+
+/* Visualização compacta inspirada no recolhimento de campos do Jira. */
+.timeline-dialog.timeline-fields-collapsed .gantt-table { --gantt-width: 2788px; }
+.timeline-dialog.timeline-fields-collapsed .gantt-grid {
+  grid-template-columns: 280px 38px 0 0 0 0 0 2470px;
+}
+.timeline-dialog.timeline-fields-collapsed .gantt-grid > :nth-child(n+3):nth-child(-n+7) {
+  padding-left: 0;
+  padding-right: 0;
+  border-right: 0;
+  color: transparent;
+}
+.timeline-dialog.timeline-fields-collapsed .gantt-grid > :nth-child(2) { left: 280px; padding: 0; }
+.timeline-dialog.timeline-fields-collapsed .gantt-grid > :nth-child(n+3):nth-child(-n+7) { left: 318px; }
+.timeline-dialog.timeline-fields-collapsed .gantt-grid > :nth-child(7) { box-shadow: none; }
+.timeline-dialog.timeline-fields-collapsed .gantt-header > :nth-child(2) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  font-size: 0;
+  overflow: visible;
+}
+.timeline-dialog.timeline-fields-collapsed .gantt-header > :nth-child(2)::after {
+  content: "CAMPOS";
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+.timeline-dialog.timeline-fields-collapsed .gantt-group-head {
+  grid-template-columns: 280px 38px 2470px;
+}
+.timeline-dialog.timeline-fields-collapsed .gantt-group-head .gantt-total {
+  left: 280px;
+  padding: 0;
+  color: transparent;
+  font-size: 0;
+  box-shadow: 5px 0 8px -8px rgba(8,32,73,.6);
+}
+
+@media (max-width: 900px) {
+  .timeline-view-actions { width: 100%; margin-left: 0; }
+  .timeline-view-actions button { flex: 1; }
+}
+
+/* Keep the page still; only the cards in each lane can scroll. */
+.dashboard-grid { grid-template-rows: minmax(0, 1fr); }
+.main-column { align-self: stretch; }
+#ongoing-panel { overflow: hidden; }
+.kanban-heading, .kanban-controls { flex-shrink: 0; }
+.kanban-card-area { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-gutter: auto; padding-right: 0; }
+.kanban-cards { height: auto; min-height: 100%; grid-template-rows: none; grid-auto-rows: minmax(160px, auto); }
+.kanban-card-area .kanban-ticket { min-height: 160px; }
+.kanban-card-area .kanban-ticket, .sidebar-window-grid .kanban-ticket {
+  content-visibility: auto;
+  contain-intrinsic-size: 160px;
+  contain: layout paint style;
+}
+.timeline-dialog .modal-dialog { width: 96vw; max-width: 1800px; margin: 2vh auto; min-height: 96dvh; }
+.timeline-dialog .modal-content { height: 92dvh; background: var(--surface); color: var(--ink); border-color: var(--line); overflow: hidden; }
+.timeline-dialog .modal-header { flex-shrink: 0; padding: 14px 20px; }
+.timeline-dialog .modal-title { font-size: 23px; }
+.timeline-dialog .modal-body { display: flex; flex-direction: column; overflow: hidden; min-height: 0; padding: 12px 20px 20px; }
+.timeline-dialog #timeline-content { flex: 1; display: flex; min-height: 0; }
+.timeline-dialog #timeline-content > div { display: flex; flex-direction: column; min-height: 0; width: 100%; }
+.timeline-dialog .gantt-table { flex: 1; min-height: 0; max-height: none; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.timeline-dialog .timeline-month-controls, .timeline-dialog .chart-note { flex-shrink: 0; }
+.timeline-navigation-hint { flex-shrink: 0; margin: 0 0 4px; color: var(--muted); font-size: 11px; }
+.timeline-navigation-hint i { color: var(--blue); margin-right: 4px; }
+.timeline-dialog .gantt-track, .timeline-dialog .gantt-axis { cursor: grab; touch-action: pan-y; user-select: none; }
+.timeline-dialog .gantt-track:active, .timeline-dialog .gantt-axis:active { cursor: grabbing; }
+.kanban-card-area { scrollbar-width: none; -ms-overflow-style: none; }
+.kanban-card-area::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.timeline-dialog .gantt-table { scrollbar-width: auto; scrollbar-color: #8da4c8 var(--canvas); }
+.timeline-dialog .gantt-table::-webkit-scrollbar { width: 11px; height: 13px; }
+.timeline-dialog .gantt-table::-webkit-scrollbar-track { background: var(--canvas); border-top: 1px solid var(--line); }
+.timeline-dialog .gantt-table::-webkit-scrollbar-thumb { background: #8da4c8; border: 3px solid var(--canvas); border-radius: 999px; }
+.timeline-dialog .gantt-table::-webkit-scrollbar-thumb:hover { background: var(--blue); }
+
+/* Allocation chart must keep its height; messages continue below inside this panel. */
+#allocation-panel { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; -ms-overflow-style: none; }
+#allocation-panel::-webkit-scrollbar, #allocation-panel .allocation-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+#allocation-panel .allocation-scroll { flex: 0 0 285px; min-height: 285px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; }
+#allocation-panel #allocation-inner { min-height: 280px; }
+#allocation-panel #allocation-chart { height: 250px !important; min-height: 250px; }
+#allocation-panel #allocation-notices { flex: 0 0 auto; }
+
+/* Atualização do snapshot do Jira sem bloquear a navegação. */
+.side-column { grid-template-rows: minmax(0,1fr) auto auto; gap: 14px; }
+.refresh-panel { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.refresh-jira { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--blue-pale); color: var(--blue); font-weight: 700; }
+.refresh-jira:hover:not(:disabled) { border-color: var(--blue); transform: translateY(-1px); }
+.refresh-jira:disabled { cursor: wait; opacity: .72; }
+.refresh-jira:disabled i { animation: jira-spin .9s linear infinite; }
+.refresh-progress { width: 100%; height: 7px; accent-color: var(--blue); }
+.refresh-status { color: var(--muted); font-size: 10px; line-height: 1.4; }
+@keyframes jira-spin { to { transform: rotate(360deg); } }
+[data-theme="dark"] .refresh-panel { background: #111; }
+[data-theme="dark"] .refresh-jira { background: #15233f; color: #8db4ff; }

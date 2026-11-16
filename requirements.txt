@@ -1,0 +1,7 @@
+dash
+dash-bootstrap-components
+plotly
+duckdb
+requests
+urllib3
+gunicorn
