@@ -15,11 +15,21 @@ from dash.exceptions import PreventUpdate
 from jira_data import LOCAL_ZONE, date_label, normal
 from demo_data import get_dataset
 
-COLORS = {"Demandas": "#4478f0", "Consultas técnicas": "#ed9a50",
-          "P": "#36af80", "M": "#4478f0", "G": "#8c6de7", "Não informado": "#808080",
-          "Responsável": "#4478f0", "Participante": "#8c6de7"}
+COLORS = {"Demandas": "#06038D", "Consultas técnicas": "#01665E",
+          "P": "#2E7D32", "M": "#06038D", "G": "#542788", "Não informado": "#828282",
+          "Responsável": "#06038D", "Participante": "#542788"}
 NO_OWNER = "Responsável não encontrado"
 JIRA_BASE_URL = "https://centraldeservicosccee.atlassian.net"
+MONTH_LABELS = ("", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro")
+
+
+def chart_color(color, theme):
+    if theme != "dark":
+        return color
+    return {"#06038D": "#8381C6", "#01665E": "#80B3AF", "#514FAF": "#514FAF",
+            "#542788": "#AA93C4", "#91C7CD": "#B8DDE1",
+            "#2E7D32": "#97BE99", "#828282": "#A6A6A6"}.get(color, color)
 
 
 def icon(name):
@@ -62,6 +72,142 @@ def result_items_for_range(data, period):
         year, month = divmod(month_index, 12)
         cutoff = anchor.replace(year=year, month=month + 1, day=min(anchor.day, monthrange(year, month + 1)[1]))
     return [item for item in items if item["resolved"] and cutoff <= item["resolved"] <= anchor]
+
+
+def general_stage_years(data):
+    return sorted({item["created"].year for item in data["items"] if item.get("created")}, reverse=True)
+
+
+def general_stage_months(data, year):
+    return sorted({item["created"].month for item in data["items"]
+                   if item.get("created") and item["created"].year == int(year)}, reverse=True)
+
+
+def general_stage_items(data, period, year, month):
+    """Filtra a visão de etapas pela data de criação e pelo período selecionado."""
+    year = int(year)
+    month = int(month or 12)
+    if period == "year":
+        start = datetime(year, 1, 1, tzinfo=LOCAL_ZONE)
+        end = datetime(year + 1, 1, 1, tzinfo=LOCAL_ZONE)
+    else:
+        reference_index = year * 12 + month - 1
+        months_back = {"month": 0, "quarter": 2, "semester": 5}.get(period, 0)
+        start_year, start_month = divmod(reference_index - months_back, 12)
+        end_year, end_month = divmod(reference_index + 1, 12)
+        start = datetime(start_year, start_month + 1, 1, tzinfo=LOCAL_ZONE)
+        end = datetime(end_year, end_month + 1, 1, tzinfo=LOCAL_ZONE)
+    return [item for item in data["items"] if item.get("created") and start <= item["created"] < end]
+
+
+def process_for_item(item):
+    """Replica a taxonomia do dashboard antigo usando somente campos disponíveis."""
+    searchable = normal(" ".join(item.get("categories", [])) + " " + (item.get("title") or ""))
+    if any(term in searchable for term in ("carta", "oficio")):
+        return "Cartas / Ofícios"
+    if item.get("topic") == "PdC":
+        return "PdCs"
+    if "regulat" in searchable:
+        return "Regulatório"
+    if "regra" in searchable:
+        return "Regras"
+    if item.get("kind") == "Consultas técnicas":
+        return "Consultas técnicas"
+    if item.get("kind") == "Demandas":
+        return "Demandas"
+    return "Outros / sem classificação"
+
+
+def process_history_figure(items, theme="light"):
+    process_colors = {
+        "Cartas / Ofícios": "#91C7CD",
+        "PdCs": "#542788",
+        "Regulatório": "#542788",
+        "Regras": "#514FAF",
+        "Demandas": "#06038D",
+        "Consultas técnicas": "#01665E",
+        "Outros / sem classificação": "#828282",
+    }
+    counts = Counter(
+        (item["created"].astimezone(LOCAL_ZONE).strftime("%Y-%m"), process_for_item(item))
+        for item in items if item.get("created")
+    )
+    months = sorted({month for month, _ in counts})
+    present_processes = [process for process in process_colors
+                         if any(counts[(month, process)] for month in months)]
+    fig = base_figure(height=225, theme=theme)
+    for process in present_processes:
+        values = [counts[(month, process)] for month in months]
+        fig.add_bar(name=process, x=months, y=values, marker_color=chart_color(process_colors[process], theme),
+                    hovertemplate="%{x}<br>" + process + ": %{y}<extra></extra>")
+    if not counts:
+        fig.add_annotation(text="Nenhum item com data de criação no período selecionado.",
+                           x=.5, y=.5, xref="paper", yref="paper", showarrow=False)
+    fig.update_layout(barmode="stack", height=225, margin=dict(l=50, r=16, t=48, b=42),
+                      legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0))
+    fig.update_xaxes(title="Mês de abertura", type="category")
+    highest_month = max((sum(counts[(month, process)] for process in present_processes)
+                         for month in months), default=0)
+    totals = [sum(counts[(month, process)] for process in present_processes) for month in months]
+    if months:
+        fig.add_scatter(x=months, y=totals, mode="text", text=[str(total) if total else "" for total in totals],
+                        textposition="top center", textfont=dict(size=12, color="#FFFFFF" if theme == "dark" else "#06038D"),
+                        showlegend=False, hoverinfo="skip", cliponaxis=False)
+    fig.update_yaxes(title="Itens criados", rangemode="tozero",
+                     dtick=max(1, ceil(highest_month / 5)), range=[0, max(1, highest_month * 1.18)])
+    return fig
+
+
+def general_stages_view(data, period="year", year=None, month=None, theme="light"):
+    years = general_stage_years(data)
+    selected_year = int(year) if year is not None else (years[0] if years else datetime.now(LOCAL_ZONE).year)
+    available_months = general_stage_months(data, selected_year)
+    selected_month = int(month) if month is not None else (available_months[0] if available_months else 12)
+    items = general_stage_items(data, period, selected_year, selected_month)
+    lanes = [
+        ("Em Fila", [item for item in items if not item["closed"] and item["queue"]], "fa-inbox"),
+        ("Em desenvolvimento", [item for item in items if not item["closed"] and not item["queue"]], "fa-gears"),
+        ("Finalizado", [item for item in items if item["closed"] and not item["cancelled"]], "fa-circle-check"),
+        ("Estudos", [], "fa-book-open"),
+    ]
+    columns = []
+    for title, lane_items, lane_icon in lanes:
+        demands = sum(item["kind"] == "Demandas" for item in lane_items)
+        consultations = sum(item["kind"] == "Consultas técnicas" for item in lane_items)
+        columns.append(html.Section([
+            html.Div([icon(lane_icon), html.H3(title)], className="general-stage-heading"),
+            html.Div([
+                html.Article([html.Span("Demandas"), html.Strong(str(demands))], className="general-stage-stat general-stage-stat--demand"),
+                html.Article([html.Span("Consultas técnicas"), html.Strong(str(consultations))], className="general-stage-stat general-stage-stat--consultation"),
+            ], className="general-stage-stats"),
+            html.Small(f"{len(lane_items)} itens no total", className="general-stage-total"),
+        ], className="general-stage-column"))
+    consultations_waiting = sum(i["kind"] == "Consultas técnicas" and not i["owner"]
+                                for i in active_items(data))
+    pending_aneel = sum(normal(i["status"]) == "aguardando aneel" for i in active_items(data))
+    letters = len(data.get("letters", []))
+    highlights = [
+        ("Consultas na fila", consultations_waiting, "Sem responsável", "unassigned", "fa-user-clock"),
+        ("Pendências Aneel", pending_aneel, "Aguardando Aneel", "pending", "fa-clock"),
+        ("Cartas", letters, "Ações em destaque", "cards", "fa-envelope"),
+    ]
+    return html.Div([
+        html.Div(columns, className="general-stages-grid"),
+        html.Section([
+            html.Div([icon("fa-chart-line"), html.H3("Evolução histórica de criação por processo")],
+                     className="process-history-title"),
+            dcc.Graph(figure=process_history_figure(items, theme), responsive=True,
+                      config={"displayModeBar": False}, className="process-history-chart",
+                      style={"height": "225px"}),
+        ], className="process-history-panel"),
+        html.Div([
+            html.Button([icon(symbol), html.Span([html.Strong(label), html.Small(detail)]),
+                         html.B(str(count)), icon("fa-arrow-right")],
+                        id={"type": "sidebar-open", "view": "general-" + view},
+                        n_clicks=0, className="general-highlight")
+            for label, count, detail, view, symbol in highlights
+        ], className="general-highlights"),
+    ])
 
 
 def filtered_data(data, kind, owner="all", order="created"):
@@ -229,11 +375,11 @@ def base_figure(height=250, theme="light"):
     fig = go.Figure()
     fig.update_layout(template="plotly_dark" if dark else "plotly_white", height=height,
                       margin=dict(l=45, r=15, t=35, b=35),
-                      font=dict(family="Arial, sans-serif", size=11, color="#b5b5b5" if dark else "#68748b"),
+                      font=dict(family="Arial, sans-serif", size=11, color="#EAEAEA" if dark else "#4C4C4C"),
                       paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                       legend=dict(orientation="h", y=1.2, x=0, traceorder="normal"), bargap=.4)
-    fig.update_xaxes(gridcolor="#2b2b2b" if dark else "#edf0f5", zeroline=False)
-    fig.update_yaxes(gridcolor="#2b2b2b" if dark else "#edf0f5", zeroline=False)
+    fig.update_xaxes(gridcolor="#828282" if dark else "#EAEAEA", zeroline=False)
+    fig.update_yaxes(gridcolor="#828282" if dark else "#EAEAEA", zeroline=False)
     return fig
 
 
@@ -256,7 +402,7 @@ def allocation_view(data, mode="kind", role="owner", theme="light", items=None):
     for category in categories:
         values = [sum(person == name and (assigned_role if mode == "role" else item[mode] or "Não informado") == category
                       for person, assigned_role, item in rows) for name in people]
-        fig.add_bar(name=category, x=people, y=values, marker_color=COLORS[category], text=[v or "" for v in values], textposition="inside",
+        fig.add_bar(name=category, x=people, y=values, marker_color=chart_color(COLORS[category], theme), text=[v or "" for v in values], textposition="inside",
                     hovertemplate="%{x}<br>" + category + ": %{y}<extra></extra>")
     fig.update_layout(barmode="stack", clickmode="event", uirevision=f"{mode}-{role}")
     max_total = max(Counter(person for person, _, _ in rows).values(), default=0)
@@ -264,7 +410,7 @@ def allocation_view(data, mode="kind", role="owner", theme="light", items=None):
     fig.update_xaxes(showticklabels=False, fixedrange=True)
     if not rows:
         fig.add_annotation(text="Nenhuma alocação encontrada para os filtros selecionados", x=.5, y=.5,
-                           xref="paper", yref="paper", showarrow=False, font={"size": 14, "color": "#8b94a5"})
+                           xref="paper", yref="paper", showarrow=False, font={"size": 14, "color": "#828282"})
         fig.update_xaxes(visible=False)
         fig.update_yaxes(visible=False)
     buttons = [html.Button(name, id={"type": "person-button", "name": name}, n_clicks=0,
@@ -399,7 +545,7 @@ def results_content(data, period, theme="light"):
     for kind in ["Demandas", "Consultas técnicas"]:
         values = [sum(item["kind"] == kind and (item["effort"] or "Não informado") == size for item in items) for size in ["P", "M", "G", "Não informado"]]
         effort.add_bar(x=["P", "M", "G", "Não informado"], y=values, name=kind,
-                       marker_color=COLORS[kind], text=[value or "" for value in values], textposition="inside")
+                       marker_color=chart_color(COLORS[kind], theme), text=[value or "" for value in values], textposition="inside")
     # Barras agrupadas mantêm os dois tipos visíveis mesmo quando todos os
     # itens caem na mesma categoria (por exemplo, "Não informado").
     effort.update_layout(barmode="group", bargap=.28, bargroupgap=.08)
@@ -411,7 +557,7 @@ def results_content(data, period, theme="light"):
     time = base_figure(theme=theme, height=max(250, 38 * len(measured)))
     if measured:
         labels = sorted(measured, key=lambda s: mean(measured[s]))
-        time.add_bar(y=labels, x=[mean(measured[s]) for s in labels], orientation="h", marker_color="#8c6de7",
+        time.add_bar(y=labels, x=[mean(measured[s]) for s in labels], orientation="h", marker_color=chart_color("#542788", theme),
                      customdata=[len(measured[s]) for s in labels], text=[f"{mean(measured[s]):.1f} d".replace(".", ",") for s in labels], textposition="auto",
                      hovertemplate="%{y}: %{x:.1f} dias<br>%{customdata} itens com esse status<extra></extra>")
         time.update_layout(margin=dict(l=130, r=15, t=20, b=40))
@@ -524,7 +670,7 @@ def timeline_view(items, page, selected_year):
             if finish and start and start <= finish and start < high and finish >= low:
                 left = (max(start,low)-low).total_seconds()/(high-low).total_seconds()*100
                 width = (min(finish,high)-max(start,low)).total_seconds()/(high-low).total_seconds()*100
-                marks.append(html.Span("←" if start < low else "", className="gantt-bar", style={"left":f"{left}%", "width":f"{max(0.6,width)}%", "background":"#ff8c70" if item["overdue"] else "#00a3ba"}, title=f"Início: {date_label(item.get('start_date'))} · Fim: {date_label(finish)}"))
+                marks.append(html.Span("←" if start < low else "", className="gantt-bar", style={"left":f"{left}%", "width":f"{max(0.6,width)}%", "background":"#E47F4D" if item["overdue"] else "#01665E"}, title=f"Início: {date_label(item.get('start_date'))} · Fim: {date_label(finish)}"))
             else:
                 marks.append(html.Small("Sem prazo" if not finish else date_label(finish),className="muted"))
         return html.Div(marks,className="gantt-track",style={"backgroundSize":f"{7/days*100}% 100%"})
@@ -596,6 +742,10 @@ def dashboard_layout(data):
     months = periods(data)
     result_options = result_period_options(data)
     years = timeline_years(data)
+    stage_years = general_stage_years(data)
+    stage_year = stage_years[0] if stage_years else datetime.now(LOCAL_ZONE).year
+    stage_months = general_stage_months(data, stage_year)
+    stage_month = stage_months[0] if stage_months else datetime.now(LOCAL_ZONE).month
     # Deixa as visões mais usadas prontas no primeiro carregamento. Assim, a troca
     # de aba não precisa aguardar a primeira construção dos cards ou do Plotly.
     initial_items = [item for item in active_items(data) if not item["queue"]]
@@ -604,10 +754,17 @@ def dashboard_layout(data):
     )
     return [
         html.Section([
-            html.H1("Dashboard de Demandas e Consultas Técnicas", className="dashboard-title"),
-            dcc.Tabs(id="activity-tabs", value="ongoing", className="manager-tabs", children=[
+            html.Div([
+                html.H1("Dashbfard de Demandas e Consultas Técnicas", className="dashboard-title"),
+                html.Img(src="/assets/logo CCEE favicon.png", className="ccee-logo ccee-logo--light", alt="CCEE"),
+                html.Img(src="/assets/CCEE branco_marca_rgb.png", className="ccee-logo ccee-logo--dark", alt="CCEE"),
+                html.Button([icon("fa-file-excel"), " Exportar Excel"], id="export-tab",
+                            className="export-excel", title="Baixar todos os itens filtrados desta aba"),
+            ], className="export-heading"),
+            dcc.Download(id="export-workbook"),
+            dcc.Tabs(id="activity-tabs", value="general", className="manager-tabs", children=[
                 dcc.Tab(label=label, value=value, className="manager-tab", selected_className="manager-tab--selected")
-                for label, value in [("O que está rolando", "ongoing"), ("O que está próximo", "upcoming"), ("Resultados", "results")]
+                for label, value in [("Etapas gerais", "general"), ("O que está rolando", "ongoing"), ("O que está próximo", "upcoming"), ("Resultados", "results")]
             ]),
             html.Div([
                 html.Div([
@@ -629,7 +786,36 @@ def dashboard_layout(data):
             html.Div([html.Span("Responsável", className="navigation-label"), dcc.Dropdown(id="owner-filter", options=[{"label":"Todos", "value":"all"}] + [{"label":name,"value":name} for name in owners], value="all", clearable=False)], className="navigation-group extra-filter"),
             html.Div([html.Span("Ordenar por", className="navigation-label"), dcc.Dropdown(id="sort-items", options=[{"label":label,"value":value} for label,value in [("Mais recentes","created"),("Prazo regulatório","regulatory_deadline"),("Tipo","kind"),("Responsável","owner"),("Complexidade","effort"),("Progresso","progress"),("Código do ticket","key")]], value="created", clearable=False)], className="navigation-group extra-filter"),
             html.Div([icon("fa-magnifying-glass"), dcc.Input(id="kanban-search", type="search", placeholder="Buscar título, código ou comentário", debounce=0.3, className="kanban-search-input")], id="kanban-search-wrap", className="kanban-search-wrap"),
-            ], className="navigation-controls", role="group", **{"aria-label": "Filtros e visualização"}),
+            ], id="navigation-controls", className="navigation-controls", role="group", hidden=True,
+               **{"aria-label": "Filtros e visualização"}),
+            html.Div([
+                html.Div([
+                    html.Div([
+                              html.H2("Etapas gerais", className="section-title"),
+                              html.P("Distribuição pelo status atual dos itens criados no período selecionado.", className="muted")]),
+                    html.Div([
+                        html.Div([html.Label("Período", htmlFor="general-stages-period"), dcc.Dropdown(
+                            id="general-stages-period", options=[
+                                {"label": "Ano inteiro", "value": "year"},
+                                {"label": "Mês específico", "value": "month"},
+                                {"label": "Trimestre até o mês", "value": "quarter"},
+                                {"label": "Semestre até o mês", "value": "semester"},
+                            ], value="year", clearable=False, searchable=False,
+                        )]),
+                        html.Div([html.Label("Ano", htmlFor="general-stages-year"), dcc.Dropdown(
+                            id="general-stages-year",
+                            options=[{"label": str(year), "value": year} for year in stage_years],
+                            value=stage_year, clearable=False, searchable=False,
+                        )]),
+                        html.Div([html.Label("Mês de referência", htmlFor="general-stages-month"), dcc.Dropdown(
+                            id="general-stages-month",
+                            options=[{"label": f"{MONTH_LABELS[month]} / {stage_year}", "value": month} for month in stage_months],
+                            value=stage_month, clearable=False, searchable=False, disabled=True,
+                        )]),
+                    ], className="general-stages-filters"),
+                ], className="general-stages-toolbar"),
+                html.Div(general_stages_view(data, "year", stage_year, stage_month, "light"), id="general-stages-content"),
+            ], id="general-stages-panel", className="general-stages-panel"),
             html.Div([
 
             html.Div(activity_panel(data), id="ongoing-panel"),
@@ -670,6 +856,7 @@ def dashboard_layout(data):
                       html.Button("Ano atual", id="timeline-today", n_clicks=0),
                       html.Button("Próximo ano →", id="timeline-next", n_clicks=0),
                       html.Div([
+                          html.Button("Exportar Excel", id="export-timeline", className="export-excel"),
                           html.Button("Minimizar campos", id="timeline-fields-toggle", n_clicks=0,
                                       title="Recolher as colunas de detalhes", **{"aria-pressed": "false"}),
                           html.Button("Expandir todos", id="timeline-groups-toggle", n_clicks=0,
@@ -682,7 +869,122 @@ def dashboard_layout(data):
     ]
 
 
+EXPORT_TABS = {"general": "Etapas gerais", "ongoing": "O que está rolando",
+               "upcoming": "O que está próximo", "results": "Resultados"}
+
+
+def export_selection(tab, mode, kind, owner, order, query, view, period, year, month,
+                     resolution, result_range, role, timeline_year):
+    from excel_report import write_report
+
+    data = get_dataset(mode)
+    filters = [("Fonte", data["source"]), ("Atualização da base", data.get("synced_at"))]
+    allocations = None
+    if tab == "general":
+        years = general_stage_years(data)
+        year = year or (years[0] if years else datetime.now(LOCAL_ZONE).year)
+        months = general_stage_months(data, year)
+        month = month or (months[0] if months else 12)
+        items = general_stage_items(data, period, year, month)
+        filters.extend([("Período de criação", {"month": "Mês", "year": "Ano inteiro",
+                        "quarter": "Último trimestre", "semester": "Último semestre"}[period]),
+                        ("Ano", int(year))])
+        if period != "year":
+            filters.append(("Mês de referência", MONTH_LABELS[int(month)]))
+    else:
+        data = filtered_data(data, kind, owner, order)
+        filters.extend([("Tipo de item", "Todos" if kind == "all" else kind),
+                        ("Responsável", "Todos" if owner == "all" else owner),
+                        ("Visualização", {"overview": "Visão geral", "allocation": "Alocação por pessoa",
+                                          "timeline": "Linha do tempo"}[view])])
+        if tab == "results" and view == "allocation":
+            items = result_items_for_range(data, result_range)
+            filters.append(("Histórico de resolução", {"all": "Todo o histórico", "year": "Ano atual",
+                            "6m": "Últimos 6 meses", "3m": "Últimos 3 meses", "1m": "Último mês"}[result_range]))
+        elif tab == "results":
+            items = result_items_for_period(data, resolution)
+            filters.append(("Período de resolução", str(resolution or "Sem período").replace("year:", "")))
+        elif tab == "ongoing" and view == "overview":
+            items = [i for lane in ("development", "late", "finished") for i in kanban_items(data, "ongoing:" + lane)]
+        else:
+            items = [i for i in active_items(data) if i["queue"] == (tab == "upcoming")]
+        if query and (tab != "results" or view != "overview"):
+            items = search_kanban(items, query)
+            filters.append(("Busca", query))
+        items = ordered_items(items, order)
+        if view == "allocation":
+            allocations = assignments(data, role, items)
+            selected = {i["id"] for _, _, i in allocations}
+            items = [i for i in items if i["id"] in selected]
+            filters.append(("Papel", {"all": "Responsável + participante", "owner": "Responsável",
+                                       "participant": "Participante"}[role]))
+        if view == "timeline":
+            filters.append(("Ano do calendário", timeline_year))
+    stages = {}
+    for i in items:
+        if i["closed"]:
+            stage = "Cancelado" if i["cancelled"] else "Finalizado"
+        elif i["queue"]:
+            stage = "Em Fila"
+        elif tab == "ongoing" and view == "overview" and i["overdue"]:
+            stage = "Atrasado"
+        else:
+            stage = "Em desenvolvimento"
+        stages[i["id"]] = stage
+    title = EXPORT_TABS[tab]
+    processes = {i["id"]: process_for_item(i) for i in items}
+    return dcc.send_bytes(lambda stream: write_report(stream, title, items, filters, allocations, stages, processes),
+                          f"{title} - {datetime.now(LOCAL_ZONE):%Y-%m-%d}.xlsx")
+
+
 def register_callbacks(app):
+    @app.callback(Output("export-workbook", "data"), Input("export-tab", "n_clicks"),
+                  Input("export-timeline", "n_clicks"), State("activity-tabs", "value"),
+                  State("data-mode", "data"), State("item-kind", "value"), State("owner-filter", "value"),
+                  State("sort-items", "value"), State("kanban-search", "value"), State("content-view", "value"),
+                  State("general-stages-period", "value"), State("general-stages-year", "value"),
+                  State("general-stages-month", "value"), State("results-month", "value"),
+                  State("result-range", "value"), State("allocation-role", "value"),
+                  State("timeline-year", "value"), prevent_initial_call=True)
+    def download_selection(clicks, timeline_clicks, *selection):
+        return export_selection(*selection)
+
+    @app.callback(Output("general-stages-year", "options"), Output("general-stages-year", "value"),
+                  Input("jira-data-version", "data"), Input("data-mode", "data"),
+                  State("general-stages-year", "value"))
+    def refresh_general_stage_years(version, mode, current):
+        years = general_stage_years(get_dataset(mode))
+        selected = int(current) if current is not None and int(current) in years else (years[0] if years else None)
+        return [{"label": str(year), "value": year} for year in years], selected
+
+    @app.callback(Output("general-stages-month", "options"), Output("general-stages-month", "value"),
+                  Input("general-stages-year", "value"), Input("jira-data-version", "data"),
+                  Input("data-mode", "data"), State("general-stages-month", "value"))
+    def refresh_general_stage_months(year, version, mode, current):
+        if year is None:
+            return [], None
+        months = general_stage_months(get_dataset(mode), year)
+        selected = int(current) if current is not None and int(current) in months else (months[0] if months else None)
+        options = [{"label": f"{MONTH_LABELS[month]} / {year}", "value": month} for month in months]
+        return options, selected
+
+    @app.callback(Output("general-stages-content", "children"),
+                  Input("general-stages-period", "value"), Input("general-stages-year", "value"),
+                  Input("general-stages-month", "value"), Input("data-mode", "data"),
+                  Input("jira-data-version", "data"), Input("theme-preference", "data"))
+    def update_general_stages(period, year, month, mode, version, theme):
+        return general_stages_view(get_dataset(mode), period or "year", year, month, theme or "light")
+
+    app.clientside_callback(
+        "function(period) { return period === 'year'; }",
+        Output("general-stages-month", "disabled"), Input("general-stages-period", "value")
+    )
+
+    app.clientside_callback(
+        "function(tab) { return tab === 'general' ? 'dashboard-grid dashboard-grid--general' : 'dashboard-grid'; }",
+        Output("dashboard-grid", "className"), Input("activity-tabs", "value")
+    )
+
     @app.callback(Output("owner-filter", "options"), Output("owner-filter", "value"),
                   Input("jira-data-version", "data"), Input("data-mode", "data"), State("owner-filter", "value"))
     def refresh_owner_options(version, mode, current):
@@ -747,12 +1049,14 @@ def register_callbacks(app):
 
     app.clientside_callback(
         """function(value) {
-            return [value !== 'ongoing', value !== 'upcoming', value !== 'results',
-                    value === 'results', value === 'upcoming' ? 'upcoming-view' : ''];
+            return [value !== 'general', value !== 'ongoing', value !== 'upcoming', value !== 'results',
+                    value === 'results', value === 'upcoming' ? 'upcoming-view' : '', value === 'general'];
         }""",
+        Output("general-stages-panel", "hidden"),
         Output("ongoing-panel", "hidden"), Output("upcoming-panel", "hidden"),
         Output("results-panel", "hidden"), Output("kanban-search-wrap", "hidden"),
-        Output("overview-panel", "className"), Input("activity-tabs", "value")
+        Output("overview-panel", "className"), Output("navigation-controls", "hidden"),
+        Input("activity-tabs", "value")
     )
 
     @app.callback(Output("results-content", "children"), Input("activity-tabs", "value"),
@@ -792,7 +1096,7 @@ def register_callbacks(app):
                 title = {"development":"Em desenvolvimento", "late":"Atrasado", "finished":"Finalizado"}[triggered["lane"].split(":")[1]]
                 return True, title, html.Div([kanban_card(item, "list") for item in items], className="sidebar-window-grid")
             if triggered.get("type") == "sidebar-open":
-                view = triggered["view"]
+                view = triggered["view"].removeprefix("general-")
                 return True, {"pending":"Pendências Aneel", "cards":"Cartas", "unassigned":"Consultas sem responsável"}[view], sidebar_window(data, view)
             if triggered.get("type") == "issue-button":
                 key = triggered["key"].removeprefix("pending:").removeprefix("ongoing:").removeprefix("upcoming:").removeprefix("list:").removeprefix("timeline:")

@@ -1,0 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+/* CCEE Design System [Legado], cores 2181:5032 e botão 2095:4268. */
+:root, :root[data-theme="light"] {
+  --ink: #4C4C4C; --navy: #06038D; --muted: #4C4C4C;
+  --canvas: #F6FBFB; --surface: #FFFFFF; --line: #E1E1F1;
+  --blue: #06038D; --blue-pale: #E1E1F1;
+  --purple: #542788; --purple-pale: #EAE5F1;
+  --green: #2E7D32; --green-pale: #E6EFE6;
+  --consultation: #01665E; --consultation-pale: #E0F1EF;
+  --orange: #D94801; --orange-pale: #FAE9E1;
+  --pink: #C51B7D; --pink-pale: #F8E4EF;
+  --danger: #B91E1E; --danger-pale: #F8E5E5;
+  --accent: #00FFFF; --on-accent: #06038D;
+  --primary-fill: #06038D; --primary-ink: #FFFFFF; --primary-hover: #04027A;
+  --disabled-fill: #EAEAEA; --disabled-ink: #828282;
+  --bs-body-bg: var(--surface); --bs-body-color: var(--ink); --bs-border-color: var(--line);
+}
+:root[data-theme="dark"] {
+  --canvas: #000000; --surface: #101010; --line: #4C4C4C;
+  --ink: #FFFFFF; --navy: #FFFFFF; --muted: #EAEAEA;
+  --blue: #E1E1F1; --blue-pale: #000C4C;
+  --purple: #AA93C4; --purple-pale: #290E58;
+  --green: #97BE99; --green-pale: #124D13;
+  --consultation: #B8DDE1; --consultation-pale: #123D3A;
+  --orange: #F0A480; --orange-pale: #242424;
+  --pink: #E28DBE; --pink-pale: #242424;
+  --danger: #E39494; --danger-pale: #242424;
+  --primary-fill: #FFFFFF; --primary-ink: #06038D; --primary-hover: #E1E1F1;
+  --disabled-fill: #3C3C3C; --disabled-ink: #A6A6A6;
+}
+html:root body { background: var(--canvas); color: var(--ink); }
+html:root .export-heading { position: relative; }
+html:root .dashboard-title { padding-left: 68px; }
+html:root .ccee-logo { position: absolute; left: 0; top: 50%; width: 58px; height: 48px; object-fit: contain; transform: translateY(-50%); }
+html:root .ccee-logo--dark { display: none; }
+html:root[data-theme="dark"] .ccee-logo--light { display: none; }
+html:root[data-theme="dark"] .ccee-logo--dark { display: block; }
+html:root :is(.surface,.metric,.compact-item,.kanban-ticket,.kanban-column,.navigation-controls,
+  .technical-strip,.filter-tabs,.general-stages-panel,.general-stages-grid,.process-history-panel,
+  .modal-content,.general-highlight,.action-card,.refresh-panel) {
+  background: var(--surface); color: var(--ink); border-color: var(--line);
+}
+html:root :is(.section-title,.dashboard-title,.chart-title,.process-history-title h3,.kanban-title,
+  .pending-summary strong,.compact-comment strong,.action-card h3,.issue-owner-name,.issue-detail-value) { color: var(--navy); }
+html:root :is(.muted,.refresh-status,.issue-detail-hint,.data-missing,.chart-note) { color: var(--muted); }
+html:root .data-missing { background: var(--canvas); border-color: var(--line); }
+html:root :is(.manager-tab,.sidebar-tab,.filter-tab,.item-page) { color: var(--ink); background: var(--surface); }
+html:root .manager-tabs .manager-tab,
+html:root .sidebar-tabs .sidebar-tab,
+html:root .filter-tabs .filter-tab { color: var(--ink); background: var(--surface); }
+html:root .navigation-controls { background: var(--surface); }
+html:root .issue-detail-icon--orange { color: var(--orange); background: var(--orange-pale); }
+html:root .issue-detail-icon--purple { color: var(--purple); background: var(--purple-pale); }
+html:root .late-status { color: var(--orange); }
+html:root :is(.manager-tab--selected,.sidebar-tab--selected,.filter-tab--selected,.item-page--selected),
+html:root :is(.manager-tab--selected,.sidebar-tab--selected,.filter-tab--selected,.item-page--selected):hover {
+  color: var(--blue) !important; background: var(--blue-pale) !important; border-color: var(--blue) !important;
+  box-shadow: none;
+}
+html:root :is(.general-stage-stat--demand,.mini-badge--blue,.mini-badge--M,.issue-status--blue,.technical-chip--blue) {
+  background: var(--blue-pale); color: var(--blue); border-color: var(--blue);
+}
+html:root .general-stage-stat--consultation { background: var(--consultation-pale); color: var(--consultation); border-color: var(--consultation); }
+html:root :is(.mini-badge--G,.mini-badge--purple) { background: var(--purple-pale); color: var(--purple); }
+html:root :is(.mini-badge--P,.technical-chip--green,.issue-status--green) { background: var(--green-pale); color: var(--green); }
+html:root :is(.mini-badge--orange,.technical-chip--orange,.issue-status--orange) { background: var(--orange-pale); color: var(--orange); }
+html:root :is(.mini-badge--neutral,.mini-badge--gray) { background: var(--canvas); color: var(--muted); }
+html:root .pending-count { color: var(--green); border-color: var(--green); }
+html:root :is(.person-buttons button,.gantt-key,.gantt-owner,.compact-comment i,.issue-detail-icon) { color: var(--blue); }
+html:root :is(.gantt-avatar,.issue-owner-mark) { background: #06038D; color: #FFFFFF; }
+html:root .gantt-today { background: var(--accent); }
+html:root .compact-progress { background: var(--line); }
+html:root .compact-progress-label { color: var(--green); }
+
+/* Botões de ação. Cards clicáveis e controles da tabela mantêm sua estrutura. */
+html:root :is(.export-excel,.theme-toggle,.refresh-jira,.sidebar-open-button,.item-detail-button,
+  .kanban-controls button,.timeline-month-controls button,.wide-button,.issue-jira-link) {
+  min-width: 44px; min-height: 44px; height: auto;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 0 16px; border: 1px solid var(--blue); border-radius: 30px;
+  font: 400 14px/1.2 Roboto, Arial, sans-serif;
+  background: var(--surface); color: var(--blue); box-shadow: none;
+  transition: background-color .15s, color .15s, border-color .15s;
+}
+html:root button:is(.export-excel,.item-detail-button,.sidebar-open-button) {
+  background: var(--primary-fill); color: var(--primary-ink); border-color: var(--primary-fill);
+}
+html:root button:is(.export-excel,.item-detail-button,.sidebar-open-button):hover {
+  background: var(--primary-hover); color: var(--primary-ink);
+}
+html:root button.refresh-jira { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+html:root button.refresh-jira:hover:not(:disabled) { background: #4DFFFF; color: #06038D; transform: none; }
+html:root :is(.theme-toggle,.kanban-controls button,.timeline-month-controls button,.wide-button,.issue-jira-link):hover:not(:disabled) {
+  background: #E1E1F1; color: #06038D;
+}
+html:root button:focus-visible, html:root a:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+html:root button:active:not(:disabled) { box-shadow: inset 0 0 0 2px var(--blue); }
+html:root button:disabled { background: var(--disabled-fill); color: var(--disabled-ink); border-color: var(--disabled-fill); cursor: default; opacity: 1; }
+html:root .general-highlight { font-family: Roboto, Arial, sans-serif; }
+html:root .general-highlight:focus-visible { border-color: var(--blue); }
+
+/* Os três controles do cabeçalho reservam espaço para a dimensão oficial. */
+.dashboard-grid--general .export-heading .dashboard-title { max-width: calc(100% - 560px); }
+.dashboard-grid--general .theme-toggle,
+.dashboard-grid--general .refresh-panel { width: 175px; height: 44px; }
+.dashboard-grid--general .refresh-panel { right: calc(max(52px, (100vw - 1700px) / 2 + 52px) + 180px); }
+.dashboard-grid--general .theme-toggle { right: calc(max(52px, (100vw - 1700px) / 2 + 52px) + 365px); }
+.dashboard-grid--general .refresh-progress { top: 46px; }
+
+:root, :root[data-theme="dark"], html:root .dash-dropdown {
+  --Dash-Fill-Interactive-Strong: var(--blue);
+  --Dash-Fill-Interactive-Weak: var(--blue-pale);
+  --Dash-Fill-Inverse-Strong: var(--surface);
+  --Dash-Fill-Primary-Active: var(--blue-pale);
+  --Dash-Fill-Primary-Hover: var(--canvas);
+  --Dash-Fill-Disabled: var(--disabled-fill);
+  --Dash-Stroke-Strong: var(--muted); --Dash-Stroke-Weak: var(--line);
+  --Dash-Text-Primary: var(--blue); --Dash-Text-Strong: var(--ink);
+  --Dash-Text-Weak: var(--muted); --Dash-Text-Disabled: var(--disabled-ink);
+}

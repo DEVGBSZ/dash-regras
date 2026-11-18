@@ -57,7 +57,7 @@ def serve_layout():
                         html.Small(f"Última atualização: {stamp} · {team_status}", id="refresh-status", className="refresh-status", **{"aria-live": "polite"}),
                     ], className="refresh-panel"),
                 ], className="side-column"),
-            ], className="dashboard-grid"),
+            ], id="dashboard-grid", className="dashboard-grid"),
         ], className="app-shell"),
     ])
 

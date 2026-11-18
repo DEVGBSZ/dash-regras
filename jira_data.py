@@ -140,9 +140,14 @@ def status_durations(history, created, resolved):
     return dict(total), complete
 
 
-def build_items(raw_issues, history, comments, subtasks, feed, as_of, team_scope):
+def build_items(raw_issues, history, comments, subtasks, feed, as_of, team_scope, categories=()):
     fields = latest_fields(history)
     comments_by_key = latest_comments(comments)
+    categories_by_key = defaultdict(set)
+    for row in categories:
+        key, category = text(row.get("chave")), text(row.get("categorias"))
+        if key and category:
+            categories_by_key[key].add(category)
     histories = defaultdict(list)
     for row in history:
         histories[text(row.get("chave"))].append(row)
@@ -212,6 +217,7 @@ def build_items(raw_issues, history, comments, subtasks, feed, as_of, team_scope
         result.append(dict(
             id=f"{feed}:{key}", key=key, title=text(raw.get("resumo")) or "Título não encontrado",
             kind=kind, topic="Regras" if feed == "regras" else "PdC", owner=owner or None,
+            categories=sorted(categories_by_key[key]),
             owner_account_id=owner_account_id or None,
             participants=participants, participants_known=participants_row is not None,
             effort=effort, status=status or None, closed=closed, cancelled=cancelled,
@@ -278,7 +284,8 @@ def _load(path, modified):
                 issues = rows(con, prefix + "issues", tables)
                 result["raw_count"] += len(issues)
                 result["items"].extend(build_items(issues, rows(con, prefix + "history", tables),
-                    rows(con, prefix + "comments", tables), rows(con, prefix + "subtarefas", tables), feed, as_of, team_scope))
+                    rows(con, prefix + "comments", tables), rows(con, prefix + "subtarefas", tables),
+                    feed, as_of, team_scope, rows(con, prefix + "categorias", tables)))
                 for missing in result["feeds"][feed].get("errors", []):
                     result["errors"].append(f"Não foi possível consultar {missing} no feed {feed}; os indicadores relacionados estão incompletos.")
     except duckdb.Error:
