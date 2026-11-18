@@ -127,6 +127,11 @@
 .dashboard-grid { grid-template-rows: minmax(0, 1fr); }
 .main-column { align-self: stretch; }
 #ongoing-panel { overflow: hidden; }
+#upcoming-panel { overflow-y: auto; overflow-x: hidden; padding-bottom: 12px; overscroll-behavior: contain; }
+.upcoming-view .compact-grid { align-items: stretch; }
+.upcoming-view .compact-item { min-height: 0; display: flex; flex-direction: column; }
+.upcoming-view .compact-item .item-detail-button { margin-top: auto; }
+.upcoming-view .item-pages .tab-content { overflow: visible; }
 .kanban-heading, .kanban-controls { flex-shrink: 0; }
 .kanban-card-area { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-gutter: auto; padding-right: 0; }
 .kanban-cards { height: auto; min-height: 100%; grid-template-rows: none; grid-auto-rows: minmax(160px, auto); }
