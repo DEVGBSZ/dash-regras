@@ -755,7 +755,7 @@ def dashboard_layout(data):
     return [
         html.Section([
             html.Div([
-                html.H1("Dashbfard de Demandas e Consultas Técnicas", className="dashboard-title"),
+                html.H1("Dashboard de Demandas e Consultas Técnicas", className="dashboard-title"),
                 html.Img(src="/assets/logo CCEE favicon.png", className="ccee-logo ccee-logo--light", alt="CCEE"),
                 html.Img(src="/assets/CCEE branco_marca_rgb.png", className="ccee-logo ccee-logo--dark", alt="CCEE"),
                 html.Button([icon("fa-file-excel"), " Exportar Excel"], id="export-tab",
