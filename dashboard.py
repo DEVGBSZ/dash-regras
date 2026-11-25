@@ -6,6 +6,7 @@ from statistics import mean
 from datetime import datetime, timedelta
 from calendar import monthrange
 from functools import lru_cache
+import json
 
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
@@ -251,7 +252,7 @@ def source_info(data):
 
 
 def compact_item(item, scope=""):
-    tone = "orange" if item["kind"] == "Consultas técnicas" else "blue" if item["topic"] == "Regras" else "purple"
+    tone = "consultation" if item["kind"] == "Consultas técnicas" else "demand"
     progress = item["progress"]
     return html.Article([
         html.Div([badge("Consulta Técnica" if item["kind"] == "Consultas técnicas" else "Demanda" if item["topic"] == "Regras" else item["topic"], tone),
@@ -288,16 +289,26 @@ def item_list(items):
     ])
 
 
-def kanban_card(item, scope):
-    return html.Button([
-        html.Div([html.Span(item["key"], className="kanban-ticket-key"),
-                  badge("Consulta Técnica" if item["kind"] == "Consultas técnicas" else "Demanda", "blue")], className="kanban-ticket-meta"),
-        html.Span(item["title"], className="kanban-ticket-title"),
+def kanban_card(item, scope, expandable=False):
+    key = html.Span(item["key"], className="kanban-ticket-key")
+    title = html.Span(item["title"], className="kanban-ticket-title")
+    kind = badge("Consulta Técnica" if item["kind"] == "Consultas técnicas" else "Demanda",
+                 "consultation" if item["kind"] == "Consultas técnicas" else "demand")
+    fields = [
         html.Div([badge("Complexidade " + (item["effort"] or "—"), item["effort"] or "neutral"), html.Span(f"{item['progress']:g}%" if item["progress"] is not None else "Progresso não informado")], className="kanban-ticket-meta"),
         html.Div([icon("fa-user"), html.Span(item["owner"] or NO_OWNER)], className="kanban-ticket-owner"),
         html.Div([html.Span(item["status"] or "Status não encontrado"),
                   html.Span("Regulatório: " + date_label(item.get("regulatory_deadline"))) if item["kind"] == "Demandas" else html.Span("Data fim: " + date_label(item.get("end_date")))], className="kanban-ticket-footer"),
-    ], id={"type": "issue-button", "key": f"{scope}:{item['id']}"}, n_clicks=0, className="kanban-ticket", title="Abrir detalhes: " + item["title"])
+    ]
+    button_id = {"type": "issue-button", "key": f"{scope}:{item['id']}"}
+    if expandable:
+        return html.Details([
+            html.Summary([key, title]),
+            html.Div([kind, *fields, html.Button("Ver detalhes", id=button_id, n_clicks=0,
+                                                 className="item-detail-button")], className="kanban-row-fields"),
+        ], className="kanban-row")
+    return html.Button([html.Div([key, kind], className="kanban-ticket-meta"), title, *fields],
+                       id=button_id, n_clicks=0, className="kanban-ticket", title="Abrir detalhes: " + item["title"])
 
 
 def kanban_items(data, lane):
@@ -313,7 +324,27 @@ def search_kanban(items, query):
     return [item for item in items if not term or any(term in normal(value) for value in (item["title"], item["key"], item["comment"]))]
 
 
-def kanban_board(data, upcoming=False, query=""):
+def native_rows(component):
+    """Envia a lista como uma única propriedade Dash; o navegador monta os nós em lote."""
+    def encode(node):
+        if isinstance(node, (list, tuple)):
+            return [encode(child) for child in node]
+        if not hasattr(node, "to_plotly_json"):
+            return node
+        spec = node.to_plotly_json()
+        props = spec["props"].copy()
+        children = props.pop("children", [])
+        if not isinstance(children, (list, tuple)):
+            children = [children]
+        if "id" in props:
+            props["data-issue-key"] = props.pop("id")["key"]
+        props.pop("n_clicks", None)
+        return [spec["type"].lower(), props, encode(children)]
+
+    return html.Div(**{"data-native-rows": json.dumps(encode(component), ensure_ascii=False, separators=(",", ":"))})
+
+
+def kanban_board(data, upcoming=False, query="", expandable=True):
     scope = "upcoming" if upcoming else "ongoing"
     lanes = [("Na fila" if upcoming else "Em desenvolvimento", "development"),
              ("Atrasado", "late"), ("Finalizado", "finished")]
@@ -324,10 +355,12 @@ def kanban_board(data, upcoming=False, query=""):
         if query and not items:
             continue
         items = ordered_items(items, data.get("sort", "created"))
-        cards = html.Div([kanban_card(item, scope) for item in items], className="kanban-cards") if items else html.P("Nenhum item nesta etapa.", className="empty-state")
+        cards = html.Ul([
+            html.Li(kanban_card(item, scope, expandable), className="kanban-list-item") for item in items
+        ], className="kanban-list") if items else html.P("Nenhum item nesta etapa.", className="empty-state")
         columns.append(html.Section([
             html.Div([html.Button(title, id={"type": "lane-open", "lane": lane}, n_clicks=0, className="lane-open"), html.Span(str(len(items)), className="kanban-count")], className="kanban-heading"),
-            html.Div(cards, id={"type": "kanban-cards", "lane": lane}, className="kanban-card-area", tabIndex=0, **{"aria-label": title}),
+            html.Div(native_rows(cards), id={"type": "kanban-cards", "lane": lane}, className="kanban-card-area", tabIndex=0, **{"aria-label": title}),
         ], className=f"kanban-column kanban-column--{tone}"))
     return html.Div([
         html.Div([html.H2("O que está próximo" if upcoming else "O que está rolando", className="section-title"),
@@ -336,9 +369,9 @@ def kanban_board(data, upcoming=False, query=""):
     ], className="kanban-view")
 
 
-def activity_panel(data, upcoming=False, query=""):
+def activity_panel(data, upcoming=False, query="", expandable=True):
     if not upcoming:
-        return kanban_board(data, query=query)
+        return kanban_board(data, query=query, expandable=expandable)
     active = active_items(data)
     items = search_kanban([item for item in active if item["queue"]], query)
     items = ordered_items(items, data.get("sort", "created"))
@@ -589,13 +622,13 @@ def sidebar_layout(data):
                           html.Button("Ver detalhes", id={"type": "issue-button", "key": "pending:" + item["id"]}, n_clicks=0, className="item-detail-button")], className="real-pending") for item in pending[:3]], className="pending-list"),
         html.Button(f"Ver todas as {len(pending)} pendências", id={"type": "sidebar-open", "view": "pending"}, n_clicks=0, className="sidebar-open-button"),
     ], className="surface side-card pending-card")
-    cards_section = html.Section([html.P("AÇÕES EM DESTAQUE", className="section-kicker"), html.H2("Cartas", className="section-title"),
+    cards_section = html.Section([html.P("ACOMPANHAMENTO DE CARTAS", className="section-kicker"), html.H2("Cartas", className="section-title"),
                   *[html.Article([
                       html.Div(icon(letter["icon"]), className=f"action-icon action-icon--{letter['tone']}"),
                       html.Div([badge(letter["status"], letter["tone"]), html.H3(letter["title"]), html.P(letter["description"])]),
                   ], className="action-card") for letter in data.get("letters", [])[:2]],
-                  html.Button("Ver todas as cartas", id={"type": "sidebar-open", "view": "cards"}, n_clicks=0, className="sidebar-open-button"),
-                  missing("Cartas e assinaturas", "Não foram encontrados registros identificados como cartas/ofícios nem um fluxo de assinatura nos dados disponíveis do Jira.") if not data.get("letters") else None], className="surface side-card cards-section")
+                  html.Button("Ver todas as cartas", id="letters-open", n_clicks=0, className="sidebar-open-button"),
+                  missing("Acompanhamento de cartas", "Não foram encontrados registros na aba Acompanhamento Cartas da planilha do SharePoint.") if not data.get("letters") else None], className="surface side-card cards-section")
     unassigned = [i for i in active_items(data) if i["kind"] == "Consultas técnicas" and not i["owner"]]
     queue_section = html.Section([
         html.H2("Consultas sem responsável", className="section-title"), html.P(f"{len(unassigned)} consultas aguardando atribuição"),
@@ -624,8 +657,15 @@ def sidebar_window(data, view):
         html.P(f"{len(letters)} cartas", className="muted"),
         html.Div([html.Article([
             badge(letter["status"], letter["tone"]), html.H3(letter["title"]), html.P(letter["description"]),
+            html.Dl([
+                *[html.Div([html.Dt(label), html.Dd(letter.get(field))], className="letter-detail")
+                  for label, field in (("Processo", "process"), ("Frente", "front"), ("Ponto focal", "owner"),
+                                       ("Participantes", "participants"), ("Recebimento", "received_date"),
+                                       ("Envio previsto", "planned_send"), ("Prazo regulatório", "regulatory_deadline"))
+                  if letter.get(field)]
+            ], className="letter-details"),
         ], className="letter-window-card") for letter in letters], className="sidebar-window-grid") if letters else
-        html.P("Nenhuma carta ou fluxo de assinatura foi encontrado nos dados disponíveis do Jira."),
+        html.P("Nenhum registro foi encontrado na aba Acompanhamento Cartas do SharePoint."),
     ])
 
 
@@ -696,14 +736,14 @@ def timeline_view(items, page, selected_year):
                 html.Span(item["status"],className="gantt-status",title=item["status"]),track(item)
             ],className="gantt-grid gantt-item"))
         groups.append(html.Details([html.Summary([html.Span([html.Span("›",className="gantt-chevron"),name],className="gantt-person"),html.Span(f"{len(rows)} tickets",className="gantt-total"),track()],className="gantt-group-head"),*rows],className="gantt-group"))
-    return html.Div([html.P(f"{len(names)} responsáveis · {len(items)} tickets · Clique no nome para expandir",className="chart-note"),
-        html.Div([html.Div([*[html.Span(h,title=h) for h in headers],axis],className="gantt-grid gantt-header"),*groups],className="gantt-table", **{"data-timeline-year":str(year)})])
+    return native_rows(html.Div([html.P(f"{len(names)} responsáveis · {len(items)} tickets · Clique no nome para expandir",className="chart-note"),
+        html.Div([html.Div([*[html.Span(h,title=h) for h in headers],axis],className="gantt-grid gantt-header"),*groups],className="gantt-table", **{"data-timeline-year":str(year)})]))
 
 
 @lru_cache(maxsize=96)
-def cached_activity(mode, version, kind, owner, order, query, upcoming):
+def cached_activity(mode, version, kind, owner, order, query, upcoming, expandable=True):
     data = filtered_data(get_dataset(mode), kind, owner, order)
-    return activity_panel(data, upcoming, query or "")
+    return activity_panel(data, upcoming, query or "", expandable)
 
 
 @lru_cache(maxsize=48)
@@ -746,12 +786,6 @@ def dashboard_layout(data):
     stage_year = stage_years[0] if stage_years else datetime.now(LOCAL_ZONE).year
     stage_months = general_stage_months(data, stage_year)
     stage_month = stage_months[0] if stage_months else datetime.now(LOCAL_ZONE).month
-    # Deixa as visões mais usadas prontas no primeiro carregamento. Assim, a troca
-    # de aba não precisa aguardar a primeira construção dos cards ou do Plotly.
-    initial_items = [item for item in active_items(data) if not item["queue"]]
-    fig, buttons, button_style, chart_style, notices = allocation_view(
-        data, "kind", "owner", "light", initial_items
-    )
     return [
         html.Section([
             html.Div([
@@ -762,6 +796,7 @@ def dashboard_layout(data):
                             className="export-excel", title="Baixar todos os itens filtrados desta aba"),
             ], className="export-heading"),
             dcc.Download(id="export-workbook"),
+            dcc.Store(id="native-issue-click"),
             dcc.Tabs(id="activity-tabs", value="general", className="manager-tabs", children=[
                 dcc.Tab(label=label, value=value, className="manager-tab", selected_className="manager-tab--selected")
                 for label, value in [("Etapas gerais", "general"), ("O que está rolando", "ongoing"), ("O que está próximo", "upcoming"), ("Resultados", "results")]
@@ -781,6 +816,7 @@ def dashboard_layout(data):
                         dcc.Tab(label="Visão geral", value="overview", className="filter-tab", selected_className="filter-tab--selected"),
                         dcc.Tab(label="Alocação por pessoa", value="allocation", className="filter-tab", selected_className="filter-tab--selected"),
                         dcc.Tab(label="Linha do tempo", value="timeline", className="filter-tab", selected_className="filter-tab--selected"),
+                        dcc.Tab(label="Cards", value="cards", className="filter-tab", selected_className="filter-tab--selected"),
                     ]),
                 ], className="navigation-group"),
             html.Div([html.Span("Responsável", className="navigation-label"), dcc.Dropdown(id="owner-filter", options=[{"label":"Todos", "value":"all"}] + [{"label":name,"value":name} for name in owners], value="all", clearable=False)], className="navigation-group extra-filter"),
@@ -818,8 +854,8 @@ def dashboard_layout(data):
             ], id="general-stages-panel", className="general-stages-panel"),
             html.Div([
 
-            html.Div(activity_panel(data), id="ongoing-panel"),
-            html.Div(activity_panel(data, True), id="upcoming-panel", hidden=True),
+            html.Div(id="ongoing-panel"),
+            html.Div(id="upcoming-panel", hidden=True),
             html.Div([
                 html.Div([html.H2("Resultados da equipe", className="section-title"),
                           html.Div([html.Label("Período de resolução", htmlFor="results-month"), dcc.Dropdown(
@@ -839,10 +875,10 @@ def dashboard_layout(data):
                     {"label": "Último mês", "value": "1m"}], value="year", clearable=False)], id="allocation-period-control", hidden=True),
             ], className="allocation-controls"),
             html.Div(html.Div([
-                dcc.Graph(id="allocation-chart", figure=fig, responsive=True, style={"height": "250px"}, config={"displayModeBar": False}),
-                html.Div(buttons, id="person-buttons", className="person-buttons", style=button_style),
-            ], id="allocation-inner", style=chart_style), className="allocation-scroll"),
-            html.Div(notices, id="allocation-notices"),
+                dcc.Graph(id="allocation-chart", responsive=True, style={"height": "250px"}, config={"displayModeBar": False}),
+                html.Div(id="person-buttons", className="person-buttons"),
+            ], id="allocation-inner"), className="allocation-scroll"),
+            html.Div(id="allocation-notices"),
         ], id="allocation-panel", className="surface section-card workload-section", hidden=True),
         dbc.Modal([dbc.ModalHeader(dbc.ModalTitle("Linha do tempo")), dbc.ModalBody([
                   dcc.Store(id="timeline-page", data=1),
@@ -865,6 +901,15 @@ def dashboard_layout(data):
                   ], className="timeline-month-controls"),
                   html.Div(id="timeline-content")])], id="timeline-modal", is_open=False, centered=True, className="timeline-dialog", backdrop="static"),
         ], className="surface section-card activity-section"),
+        html.Dialog([
+            html.Header([
+                html.H2("Cartas", className="letters-dialog-title"),
+                html.Button("×", id="letters-dialog-close", className="letters-dialog-close",
+                            title="Fechar", **{"aria-label": "Fechar cartas"}),
+            ], className="letters-dialog-header"),
+            html.Div(sidebar_window(data, "cards"), id="letters-dialog-body",
+                     className="letters-dialog-body"),
+        ], id="letters-dialog", className="letters-dialog"),
         dbc.Modal([dbc.ModalHeader(dbc.ModalTitle(id="person-title")), dbc.ModalBody(id="person-details")], id="person-modal", is_open=False, size="xl", scrollable=True),
     ]
 
@@ -896,7 +941,7 @@ def export_selection(tab, mode, kind, owner, order, query, view, period, year, m
         filters.extend([("Tipo de item", "Todos" if kind == "all" else kind),
                         ("Responsável", "Todos" if owner == "all" else owner),
                         ("Visualização", {"overview": "Visão geral", "allocation": "Alocação por pessoa",
-                                          "timeline": "Linha do tempo"}[view])])
+                                          "timeline": "Linha do tempo", "cards": "Cards"}[view])])
         if tab == "results" and view == "allocation":
             items = result_items_for_range(data, result_range)
             filters.append(("Histórico de resolução", {"all": "Todo o histórico", "year": "Ano atual",
@@ -904,11 +949,11 @@ def export_selection(tab, mode, kind, owner, order, query, view, period, year, m
         elif tab == "results":
             items = result_items_for_period(data, resolution)
             filters.append(("Período de resolução", str(resolution or "Sem período").replace("year:", "")))
-        elif tab == "ongoing" and view == "overview":
+        elif tab == "ongoing" and view in ("overview", "cards"):
             items = [i for lane in ("development", "late", "finished") for i in kanban_items(data, "ongoing:" + lane)]
         else:
             items = [i for i in active_items(data) if i["queue"] == (tab == "upcoming")]
-        if query and (tab != "results" or view != "overview"):
+        if query and (tab != "results" or view not in ("overview", "cards")):
             items = search_kanban(items, query)
             filters.append(("Busca", query))
         items = ordered_items(items, order)
@@ -926,7 +971,7 @@ def export_selection(tab, mode, kind, owner, order, query, view, period, year, m
             stage = "Cancelado" if i["cancelled"] else "Finalizado"
         elif i["queue"]:
             stage = "Em Fila"
-        elif tab == "ongoing" and view == "overview" and i["overdue"]:
+        elif tab == "ongoing" and view in ("overview", "cards") and i["overdue"]:
             stage = "Atrasado"
         else:
             stage = "Em desenvolvimento"
@@ -938,6 +983,12 @@ def export_selection(tab, mode, kind, owner, order, query, view, period, year, m
 
 
 def register_callbacks(app):
+    @app.callback(Output("letters-dialog-body", "children"),
+                  Input("jira-data-version", "data"), Input("data-mode", "data"),
+                  prevent_initial_call=True)
+    def refresh_letters_modal(version, mode):
+        return sidebar_window(get_dataset(mode), "cards")
+
     @app.callback(Output("export-workbook", "data"), Input("export-tab", "n_clicks"),
                   Input("export-timeline", "n_clicks"), State("activity-tabs", "value"),
                   State("data-mode", "data"), State("item-kind", "value"), State("owner-filter", "value"),
@@ -1034,15 +1085,18 @@ def register_callbacks(app):
     @app.callback(Output("ongoing-panel", "children"),
                   Output("upcoming-panel", "children"), Output("sidebar-data", "children"),
                   Output("results-month", "options"), Output("results-month", "value"),
-                  Input("data-mode", "data"), Input("item-kind", "value"), Input("owner-filter", "value"), Input("sort-items", "value"), Input("kanban-search", "value"), Input("activity-tabs", "value"), Input("jira-data-version", "data"), State("results-month", "value"))
-    def switch_data(mode, kind, owner, order, query, active_tab, version, current_month):
-        data = filtered_data(get_dataset(mode), kind, owner, order)
-        months = periods(data)
-        options = result_period_options(data)
-        values = {option["value"] for option in options}
-        month = current_month if current_month in values else (months[0] if months else None)
-        ongoing = cached_activity(mode, version, kind, owner, order, query or "", False) if active_tab == "ongoing" else no_update
-        upcoming = cached_activity(mode, version, kind, owner, order, query or "", True) if active_tab == "upcoming" else no_update
+                  Input("data-mode", "data"), Input("item-kind", "value"), Input("owner-filter", "value"), Input("sort-items", "value"), Input("kanban-search", "value"), Input("activity-tabs", "value"), Input("jira-data-version", "data"), Input("content-view", "value"), State("results-month", "value"))
+    def switch_data(mode, kind, owner, order, query, active_tab, version, view, current_month):
+        options = month = no_update
+        if ctx.triggered_id is None or set(ctx.triggered_prop_ids.values()) & {"data-mode", "jira-data-version", "item-kind", "owner-filter"}:
+            data = filtered_data(get_dataset(mode), kind, owner, order)
+            months = periods(data)
+            options = result_period_options(data)
+            values = {option["value"] for option in options}
+            month = current_month if current_month in values else (months[0] if months else None)
+        show_board = view in ("overview", "cards")
+        ongoing = cached_activity(mode, version, kind, owner, order, query or "", False, view != "cards") if active_tab == "ongoing" and show_board else no_update
+        upcoming = cached_activity(mode, version, kind, owner, order, query or "", True) if active_tab == "upcoming" and show_board else no_update
         sidebar = cached_sidebar(mode, version) if ctx.triggered_id in (None, "data-mode", "jira-data-version") else no_update
         return (ongoing, upcoming, sidebar,
                 options, month)
@@ -1072,21 +1126,23 @@ def register_callbacks(app):
     @app.callback(Output("allocation-chart", "figure"), Output("person-buttons", "children"), Output("person-buttons", "style"),
                   Output("allocation-inner", "style"), Output("allocation-notices", "children"),
                   Input("allocation-mode", "value"), Input("allocation-role", "value"), Input("theme-preference", "data"), Input("data-mode", "data"),
-                  Input("activity-tabs", "value"), Input("result-range", "value"), Input("item-kind", "value"), Input("owner-filter", "value"), Input("sort-items", "value"), Input("kanban-search", "value"), Input("jira-data-version", "data"))
-    def update_allocation(mode, role, theme, data_mode, tab, result_range, kind, owner, order, query, version):
-        # Mantém o gráfico pronto em segundo plano. A abertura da aba passa a ser
-        # uma troca puramente visual no navegador, sem aguardar Plotly no servidor.
+                  Input("activity-tabs", "value"), Input("result-range", "value"), Input("item-kind", "value"), Input("owner-filter", "value"), Input("sort-items", "value"), Input("kanban-search", "value"), Input("jira-data-version", "data"), Input("content-view", "value"))
+    def update_allocation(mode, role, theme, data_mode, tab, result_range, kind, owner, order, query, version, view):
+        if view != "allocation" or tab == "general":
+            raise PreventUpdate
         return cached_allocation(data_mode, version, mode, role, theme, tab, result_range, kind, owner, order, query or "")
 
     @app.callback(Output("person-modal", "is_open"), Output("person-title", "children"), Output("person-details", "children"),
                   Input({"type": "person-button", "name": ALL}, "n_clicks"), Input("allocation-chart", "clickData"),
                   Input({"type": "issue-button", "key": ALL}, "n_clicks"), Input("data-mode", "data"), Input("jira-data-version", "data"),
-                  Input({"type": "sidebar-open", "view": ALL}, "n_clicks"), Input({"type":"lane-open", "lane":ALL}, "n_clicks"),
+                  Input({"type": "sidebar-open", "view": ALL}, "n_clicks"), Input({"type":"lane-open", "lane":ALL}, "n_clicks"), Input("native-issue-click", "data"),
                   State("allocation-role", "value"), State("activity-tabs", "value"), State("results-month", "value"), State("result-range", "value"), State("item-kind", "value"), State("owner-filter", "value"), State("sort-items", "value"), State("kanban-search", "value"), prevent_initial_call=True)
-    def select_details(person_clicks, chart_click, issue_clicks, mode, version, sidebar_clicks, lane_clicks, role, tab, month, result_range, kind, owner, order, query):
+    def select_details(person_clicks, chart_click, issue_clicks, mode, version, sidebar_clicks, lane_clicks, native_click, role, tab, month, result_range, kind, owner, order, query):
         if ctx.triggered_id in ("data-mode", "jira-data-version"):
             return False, "", []
         data, triggered = get_dataset(mode), ctx.triggered_id
+        if triggered == "native-issue-click" and native_click:
+            triggered = {"type": "issue-button", "key": native_click["key"]}
         if isinstance(triggered, dict):
             if not ctx.triggered[0].get("value"):
                 raise PreventUpdate

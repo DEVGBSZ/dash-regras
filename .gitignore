@@ -4,6 +4,7 @@ jira_snapshot.duckdb*
 .venv/
 .env
 team_members_cache.json
+sharepoint_cards_cache.json
 .pytest_cache/
 *.log
 comando terminal tela principal.txt

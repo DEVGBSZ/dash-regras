@@ -1,0 +1,88 @@
+/* Categorias funcionais solicitadas para todas as visões. */
+html:root .mini-badge--demand {
+  color: #ffffff !important;
+  background: #01665e !important;
+  border-color: #01665e !important;
+}
+
+html:root .mini-badge--consultation {
+  color: #ffffff !important;
+  background: #ECA480 !important;
+  border-color: #ECA480 !important;
+}
+
+/* As etapas continuam independentes, mas os itens passam a ser uma lista. */
+.kanban-list {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kanban-list-item {
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.kanban-list-item:last-child {
+  border-bottom: 0;
+}
+
+.kanban-card-area .kanban-ticket {
+  min-height: 0;
+  padding: 10px 7px;
+  gap: 5px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  contain-intrinsic-size: 108px;
+}
+
+.kanban-card-area .kanban-ticket:hover {
+  background: var(--blue-pale);
+}
+
+.kanban-card-area .kanban-ticket:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline-offset: -2px;
+}
+
+.kanban-card-area .kanban-ticket-title {
+  min-height: 0;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.kanban-card-area .kanban-ticket-owner {
+  margin-top: 1px;
+}
+
+.kanban-card-area .kanban-ticket-meta,
+.kanban-card-area .kanban-ticket-footer {
+  min-width: 0;
+}
+
+[data-theme="dark"] .kanban-card-area .kanban-ticket {
+  background: transparent;
+}
+
+[data-theme="dark"] .kanban-card-area .kanban-ticket:hover {
+  background: #171717;
+}
+.kanban-row > summary {
+  cursor: pointer;
+  color: var(--navy);
+  padding: 10px 8px;
+  overflow-wrap: anywhere;
+}
+.kanban-row > summary:hover,
+.kanban-row[open] > summary { background: var(--blue-pale); }
+.kanban-row > summary:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.kanban-row > summary .kanban-ticket-key { margin-inline-end: 8px; white-space: nowrap; }
+.kanban-row > summary .kanban-ticket-title { display: inline; }
+.kanban-row-fields { display: grid; gap: 7px; padding: 8px; color: var(--ink); }
+.kanban-row-fields > .mini-badge, .kanban-row-fields > button { justify-self: start; }

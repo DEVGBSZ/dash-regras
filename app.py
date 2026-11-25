@@ -51,7 +51,7 @@ def serve_layout():
                     html.Div([
                         html.Button([
                             html.I(className="fa-solid fa-rotate", **{"aria-hidden": "true"}),
-                            html.Span("Atualizar dados do Jira"),
+                            html.Span("Atualizar dados"),
                         ], id="refresh-jira", n_clicks=0, className="refresh-jira"),
                         html.Progress(id="refresh-progress", value=0, max=100, className="refresh-progress", style={"display": "none"}),
                         html.Small(f"Última atualização: {stamp} · {team_status}", id="refresh-status", className="refresh-status", **{"aria-live": "polite"}),
@@ -82,7 +82,7 @@ def refresh_jira_data(clicks, ticks, current_version):
         return False, False, no_update, no_update, no_update, no_update
     message = state["message"]
     if state.get("error"):
-        message += " Tente novamente ou confira a conexão com o feed."
+        message += " Confira as conexões do Jira e do SharePoint."
     version = state.get("version") if state.get("version") and state.get("version") != current_version else no_update
     return running, not running, message, state["progress"], ({"display": "block"} if running else {"display": "none"}), version
 

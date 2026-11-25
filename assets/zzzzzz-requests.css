@@ -148,6 +148,7 @@
 .timeline-dialog .modal-body { display: flex; flex-direction: column; overflow: hidden; min-height: 0; padding: 12px 20px 20px; }
 .timeline-dialog #timeline-content { flex: 1; display: flex; min-height: 0; }
 .timeline-dialog #timeline-content > div { display: flex; flex-direction: column; min-height: 0; width: 100%; }
+.timeline-dialog #timeline-content > [data-native-rows] > div { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 .timeline-dialog .gantt-table { flex: 1; min-height: 0; max-height: none; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .timeline-dialog .timeline-month-controls, .timeline-dialog .chart-note { flex-shrink: 0; }
 .timeline-navigation-hint { flex-shrink: 0; margin: 0 0 4px; color: var(--muted); font-size: 11px; }

@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 import duckdb
 
 from team_members import load_team_scope
+from sharepoint_data import load_letters, source_signature
 
 ROOT = Path(__file__).resolve().parent
 LOCAL_ZONE = ZoneInfo("America/Sao_Paulo")
@@ -241,7 +242,7 @@ def get_data():
     snapshot = Path(os.environ.get("JIRA_SNAPSHOT_PATH", ROOT / "jira_snapshot.duckdb"))
     fallback = ROOT.parent / "jira.duckdb"
     path = snapshot if snapshot.exists() else fallback
-    return _load(str(path), path.stat().st_mtime_ns if path.exists() else 0)
+    return _load(str(path), path.stat().st_mtime_ns if path.exists() else 0, source_signature())
 
 
 def invalidate_cache():
@@ -250,8 +251,9 @@ def invalidate_cache():
 
 
 @lru_cache(maxsize=2)
-def _load(path, modified):
-    result = dict(items=[], feeds={}, synced_at=None, source="Jira / Appfire", errors=[], raw_count=0)
+def _load(path, modified, letters_signature):
+    result = dict(items=[], feeds={}, synced_at=None, source="Jira / Appfire", errors=[], raw_count=0,
+                  letters=load_letters())
     team_scope = load_team_scope()
     if team_scope:
         result["team_scope"] = {"configured": True, "synced_at": team_scope.get("synced_at"),

@@ -108,6 +108,10 @@ def fetch_odata_entity(
                 break
             except (requests.RequestException, ValueError) as exc:
                 last_error = exc
+                if isinstance(exc, requests.HTTPError) and exc.response is not None:
+                    status = exc.response.status_code
+                    if 400 <= status < 500 and status not in (408, 425, 429):
+                        break
                 if attempt < MAX_PAGE_ATTEMPTS:
                     wait_seconds = min(2 ** attempt, 15)
                     if progress_callback:

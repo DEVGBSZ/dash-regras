@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -19,6 +20,11 @@ ENTITIES = {"issues": "Issues", "comments": "Comments", "history": "History",
             "categorias": "Categorias", "subtarefas": "Subtarefas", "palavras_chave": "Palavras-chave"}
 
 
+def _fetch_entity(entity, url):
+    with requests.Session() as session:
+        return fetch_odata_entity(entity, session, feed_base_url=url)
+
+
 def sync_snapshot(progress_callback=None):
     """Somente GET no Jira; nÃ£o altera o banco do dashboard original."""
     frames = {}
@@ -30,7 +36,7 @@ def sync_snapshot(progress_callback=None):
         if progress_callback:
             progress_callback(message, completed, total)
 
-    with requests.Session() as session:
+    with ThreadPoolExecutor(max_workers=3, thread_name_prefix="jira-odata") as pool:
         for feed in ("regras", "procedimentos"):
             try:
                 url, _ = get_feed_configuration(feed)
@@ -40,10 +46,13 @@ def sync_snapshot(progress_callback=None):
                 progress(f"Feed de {feed} nÃ£o configurado; seguindo com os demais dados.")
                 continue
             counts, errors = {}, []
-            for table, entity in ENTITIES.items():
+            jobs = {pool.submit(_fetch_entity, entity, url): (table, entity)
+                    for table, entity in ENTITIES.items()}
+            for future in as_completed(jobs):
+                table, entity = jobs[future]
                 progress(f"Atualizando {feed}: {entity}â€¦")
                 try:
-                    frame = fetch_odata_entity(entity, session, feed_base_url=url)
+                    frame = future.result()
                     counts[table] = len(frame)
                     if len(frame.columns):
                         frames[f"{feed}_{table}"] = frame
