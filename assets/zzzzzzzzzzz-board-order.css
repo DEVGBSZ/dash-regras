@@ -1,0 +1,12 @@
+#overview-panel:not(.ongoing-view) #ongoing-board-heading { display: none; }
+.ongoing-view #ongoing-panel > .kanban-view > .panel-heading { display: none; }
+#ongoing-board-heading { justify-content: flex-start; flex-wrap: wrap; }
+#ongoing-board-heading .muted { display: none; }
+#ongoing-board-heading .ongoing-board-order { margin-left: auto; }
+.ongoing-board-order { display: flex; align-items: center; gap: 8px; min-width: 230px; }
+.ongoing-board-order label { margin: 0; white-space: nowrap; font-size: 12px; font-weight: 700; }
+.ongoing-board-order .dash-dropdown { width: 165px; }
+@media (max-width: 760px) {
+  #ongoing-board-heading .ongoing-board-order { margin-left: 0; }
+  .ongoing-board-order { width: 100%; }
+}

@@ -344,7 +344,20 @@ def native_rows(component):
     return html.Div(**{"data-native-rows": json.dumps(encode(component), ensure_ascii=False, separators=(",", ":"))})
 
 
-def kanban_board(data, upcoming=False, query="", expandable=True):
+def board_date_order(items, order, today=None):
+    if order == "created":
+        return ordered_items(items, "created")
+    today = today or datetime.now(LOCAL_ZONE)
+
+    def date_key(item):
+        finish = item.get("end_date") or item.get("delivery_date") or item.get("regulatory_deadline") or item.get("due")
+        return (finish is None, abs((finish - today).total_seconds()) if finish else float("inf"),
+                -(item["created"].timestamp()) if item.get("created") else 0)
+
+    return sorted(items, key=date_key)
+
+
+def kanban_board(data, upcoming=False, query="", expandable=True, board_order="created"):
     scope = "upcoming" if upcoming else "ongoing"
     lanes = [("Na fila" if upcoming else "Em desenvolvimento", "development"),
              ("Atrasado", "late"), ("Finalizado", "finished")]
@@ -354,7 +367,7 @@ def kanban_board(data, upcoming=False, query="", expandable=True):
         items = search_kanban(kanban_items(data, lane), query)
         if query and not items:
             continue
-        items = ordered_items(items, data.get("sort", "created"))
+        items = board_date_order(items, board_order) if not upcoming else ordered_items(items, data.get("sort", "created"))
         cards = html.Ul([
             html.Li(kanban_card(item, scope, expandable), className="kanban-list-item") for item in items
         ], className="kanban-list") if items else html.P("Nenhum item nesta etapa.", className="empty-state")
@@ -363,15 +376,15 @@ def kanban_board(data, upcoming=False, query="", expandable=True):
             html.Div(native_rows(cards), id={"type": "kanban-cards", "lane": lane}, className="kanban-card-area", tabIndex=0, **{"aria-label": title}),
         ], className=f"kanban-column kanban-column--{tone}"))
     return html.Div([
-        html.Div([html.H2("O que está próximo" if upcoming else "O que está rolando", className="section-title"),
-                  html.Span("Situação atual dos itens no Jira", className="muted")], className="panel-heading"),
+        html.Div([html.H2("O que está próximo", className="section-title"),
+                  html.Span("Situação atual dos itens no Jira", className="muted")], className="panel-heading") if upcoming else None,
         html.Div(columns if columns else [html.P("Nenhum item corresponde à busca.", className="empty-state")], className="kanban-board"),
     ], className="kanban-view")
 
 
-def activity_panel(data, upcoming=False, query="", expandable=True):
+def activity_panel(data, upcoming=False, query="", expandable=True, board_order="created"):
     if not upcoming:
-        return kanban_board(data, query=query, expandable=expandable)
+        return kanban_board(data, query=query, expandable=expandable, board_order=board_order)
     active = active_items(data)
     items = search_kanban([item for item in active if item["queue"]], query)
     items = ordered_items(items, data.get("sort", "created"))
@@ -741,9 +754,9 @@ def timeline_view(items, page, selected_year):
 
 
 @lru_cache(maxsize=96)
-def cached_activity(mode, version, kind, owner, order, query, upcoming, expandable=True):
+def cached_activity(mode, version, kind, owner, order, query, upcoming, expandable=True, board_order="created"):
     data = filtered_data(get_dataset(mode), kind, owner, order)
-    return activity_panel(data, upcoming, query or "", expandable)
+    return activity_panel(data, upcoming, query or "", expandable, board_order)
 
 
 @lru_cache(maxsize=48)
@@ -820,7 +833,7 @@ def dashboard_layout(data):
                     ]),
                 ], className="navigation-group"),
             html.Div([html.Span("Responsável", className="navigation-label"), dcc.Dropdown(id="owner-filter", options=[{"label":"Todos", "value":"all"}] + [{"label":name,"value":name} for name in owners], value="all", clearable=False)], className="navigation-group extra-filter"),
-            html.Div([html.Span("Ordenar por", className="navigation-label"), dcc.Dropdown(id="sort-items", options=[{"label":label,"value":value} for label,value in [("Mais recentes","created"),("Prazo regulatório","regulatory_deadline"),("Tipo","kind"),("Responsável","owner"),("Complexidade","effort"),("Progresso","progress"),("Código do ticket","key")]], value="created", clearable=False)], className="navigation-group extra-filter"),
+            html.Div([html.Span("Preferência", className="navigation-label"), dcc.Dropdown(id="sort-items", options=[{"label":label,"value":value} for label,value in [("Mais recentes","created"),("Tipo","kind"),("Responsável","owner"),("Complexidade","effort"),("Progresso","progress"),("Código do ticket","key")]], value="created", clearable=False)], className="navigation-group extra-filter"),
             html.Div([icon("fa-magnifying-glass"), dcc.Input(id="kanban-search", type="search", placeholder="Buscar título, código ou comentário", debounce=0.3, className="kanban-search-input")], id="kanban-search-wrap", className="kanban-search-wrap"),
             ], id="navigation-controls", className="navigation-controls", role="group", hidden=True,
                **{"aria-label": "Filtros e visualização"}),
@@ -854,6 +867,14 @@ def dashboard_layout(data):
             ], id="general-stages-panel", className="general-stages-panel"),
             html.Div([
 
+            html.Div([
+                html.H2("O que está rolando", className="section-title"),
+                html.Div([html.Label("Ordenar por", htmlFor="ongoing-board-order"),
+                          dcc.Dropdown(id="ongoing-board-order", options=[
+                              {"label": "Data de criação", "value": "created"},
+                              {"label": "Data fim", "value": "end_date"},
+                          ], value="created", clearable=False, searchable=False)], className="ongoing-board-order"),
+            ], id="ongoing-board-heading", className="panel-heading"),
             html.Div(id="ongoing-panel"),
             html.Div(id="upcoming-panel", hidden=True),
             html.Div([
@@ -1085,8 +1106,8 @@ def register_callbacks(app):
     @app.callback(Output("ongoing-panel", "children"),
                   Output("upcoming-panel", "children"), Output("sidebar-data", "children"),
                   Output("results-month", "options"), Output("results-month", "value"),
-                  Input("data-mode", "data"), Input("item-kind", "value"), Input("owner-filter", "value"), Input("sort-items", "value"), Input("kanban-search", "value"), Input("activity-tabs", "value"), Input("jira-data-version", "data"), Input("content-view", "value"), State("results-month", "value"))
-    def switch_data(mode, kind, owner, order, query, active_tab, version, view, current_month):
+                  Input("data-mode", "data"), Input("item-kind", "value"), Input("owner-filter", "value"), Input("sort-items", "value"), Input("kanban-search", "value"), Input("activity-tabs", "value"), Input("jira-data-version", "data"), Input("content-view", "value"), Input("ongoing-board-order", "value"), State("results-month", "value"))
+    def switch_data(mode, kind, owner, order, query, active_tab, version, view, board_order, current_month):
         options = month = no_update
         if ctx.triggered_id is None or set(ctx.triggered_prop_ids.values()) & {"data-mode", "jira-data-version", "item-kind", "owner-filter"}:
             data = filtered_data(get_dataset(mode), kind, owner, order)
@@ -1095,7 +1116,7 @@ def register_callbacks(app):
             values = {option["value"] for option in options}
             month = current_month if current_month in values else (months[0] if months else None)
         show_board = view in ("overview", "cards")
-        ongoing = cached_activity(mode, version, kind, owner, order, query or "", False, view != "cards") if active_tab == "ongoing" and show_board else no_update
+        ongoing = cached_activity(mode, version, kind, owner, order, query or "", False, view != "cards", board_order or "created") if active_tab == "ongoing" and show_board else no_update
         upcoming = cached_activity(mode, version, kind, owner, order, query or "", True) if active_tab == "upcoming" and show_board else no_update
         sidebar = cached_sidebar(mode, version) if ctx.triggered_id in (None, "data-mode", "jira-data-version") else no_update
         return (ongoing, upcoming, sidebar,
@@ -1104,7 +1125,7 @@ def register_callbacks(app):
     app.clientside_callback(
         """function(value) {
             return [value !== 'general', value !== 'ongoing', value !== 'upcoming', value !== 'results',
-                    value === 'results', value === 'upcoming' ? 'upcoming-view' : '', value === 'general'];
+                    value === 'results', value === 'upcoming' ? 'upcoming-view' : (value === 'ongoing' ? 'ongoing-view' : ''), value === 'general'];
         }""",
         Output("general-stages-panel", "hidden"),
         Output("ongoing-panel", "hidden"), Output("upcoming-panel", "hidden"),
@@ -1136,8 +1157,8 @@ def register_callbacks(app):
                   Input({"type": "person-button", "name": ALL}, "n_clicks"), Input("allocation-chart", "clickData"),
                   Input({"type": "issue-button", "key": ALL}, "n_clicks"), Input("data-mode", "data"), Input("jira-data-version", "data"),
                   Input({"type": "sidebar-open", "view": ALL}, "n_clicks"), Input({"type":"lane-open", "lane":ALL}, "n_clicks"), Input("native-issue-click", "data"),
-                  State("allocation-role", "value"), State("activity-tabs", "value"), State("results-month", "value"), State("result-range", "value"), State("item-kind", "value"), State("owner-filter", "value"), State("sort-items", "value"), State("kanban-search", "value"), prevent_initial_call=True)
-    def select_details(person_clicks, chart_click, issue_clicks, mode, version, sidebar_clicks, lane_clicks, native_click, role, tab, month, result_range, kind, owner, order, query):
+                  State("allocation-role", "value"), State("activity-tabs", "value"), State("results-month", "value"), State("result-range", "value"), State("item-kind", "value"), State("owner-filter", "value"), State("sort-items", "value"), State("kanban-search", "value"), State("ongoing-board-order", "value"), prevent_initial_call=True)
+    def select_details(person_clicks, chart_click, issue_clicks, mode, version, sidebar_clicks, lane_clicks, native_click, role, tab, month, result_range, kind, owner, order, query, board_order):
         if ctx.triggered_id in ("data-mode", "jira-data-version"):
             return False, "", []
         data, triggered = get_dataset(mode), ctx.triggered_id
@@ -1148,7 +1169,8 @@ def register_callbacks(app):
                 raise PreventUpdate
             if triggered.get("type") == "lane-open":
                 filtered = filtered_data(data, kind, owner, order)
-                items = ordered_items(search_kanban(kanban_items(filtered, triggered["lane"]), query), order)
+                items = search_kanban(kanban_items(filtered, triggered["lane"]), query)
+                items = board_date_order(items, board_order or "created") if triggered["lane"].startswith("ongoing:") else ordered_items(items, order)
                 title = {"development":"Em desenvolvimento", "late":"Atrasado", "finished":"Finalizado"}[triggered["lane"].split(":")[1]]
                 return True, title, html.Div([kanban_card(item, "list") for item in items], className="sidebar-window-grid")
             if triggered.get("type") == "sidebar-open":
